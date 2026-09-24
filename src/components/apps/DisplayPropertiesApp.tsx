@@ -480,6 +480,69 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
               </select>
             </div>
 
+            {/* Visual Font Size Sample Preview Pane */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-[10px] text-gray-700">
+                <span className="font-bold flex items-center gap-1">
+                  <span>Sample Font Preview:</span>
+                </span>
+                <span className="text-[9px] font-mono text-gray-500">
+                  {fontSize === 'large'
+                    ? '120 DPI (Large · +25% Scale)'
+                    : fontSize === 'extralarge'
+                    ? '144 DPI (Extra Large · +50% Scale)'
+                    : '96 DPI (Standard · 100% Scale)'}
+                </span>
+              </div>
+
+              <div className="win98-sunken p-2 bg-white space-y-1.5 transition-all duration-150">
+                {/* Sample Title Text */}
+                <div
+                  className="font-bold text-[#000080] truncate transition-all duration-150"
+                  style={{
+                    fontSize: fontSize === 'extralarge' ? '15px' : fontSize === 'large' ? '13px' : '11px',
+                    lineHeight: '1.2',
+                  }}
+                >
+                  Active Window Title — MS Sans Serif
+                </div>
+
+                {/* Sample Body / Pangram */}
+                <div
+                  className="text-[#111111] transition-all duration-150 leading-snug"
+                  style={{
+                    fontSize: fontSize === 'extralarge' ? '14px' : fontSize === 'large' ? '12.5px' : '11px',
+                  }}
+                >
+                  The quick brown fox jumps over the lazy dog.
+                </div>
+
+                {/* Specimen Glyphs & UI Controls */}
+                <div className="pt-1 border-t border-[#dfdfdf] flex items-center justify-between gap-2">
+                  <span
+                    className="text-gray-500 tracking-wider font-mono transition-all duration-150"
+                    style={{
+                      fontSize: fontSize === 'extralarge' ? '11px' : fontSize === 'large' ? '10px' : '9px',
+                    }}
+                  >
+                    AaBbCcXxYyZz · 0123456789
+                  </span>
+
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="win98-btn"
+                    style={{
+                      fontSize: fontSize === 'extralarge' ? '11.5px' : fontSize === 'large' ? '10.5px' : '9px',
+                      padding: fontSize === 'extralarge' ? '2px 8px' : fontSize === 'large' ? '2px 6px' : '1px 5px',
+                    }}
+                  >
+                    Sample Button
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Scheme Dropdown */}
             <div>
               <div className="flex justify-between items-center mb-1">
@@ -513,7 +576,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                   onChange={(e) => {
                     setLivePreview(e.target.checked);
                     if (e.target.checked) {
-                      onApplyChanges(previewWallpaperColor, previewTitleBar);
+                      onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize);
                     }
                   }}
                   className="accent-[#000080]"
