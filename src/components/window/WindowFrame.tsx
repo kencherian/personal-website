@@ -117,7 +117,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
       >
         <div className="flex items-center gap-1.5 overflow-hidden pr-2">
           <RenderWinIcon name={win.iconName} size={16} className="shrink-0" />
-          <span className="font-bold text-[11px] leading-tight truncate tracking-tight text-white">
+          <span className="font-bold text-[var(--win98-title-font-size,11px)] leading-tight truncate tracking-tight text-white">
             {win.title}
           </span>
         </div>

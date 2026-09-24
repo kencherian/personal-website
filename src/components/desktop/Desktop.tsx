@@ -11,7 +11,7 @@ import { ResumePdfApp } from '../apps/ResumePdfApp';
 import { OutlookApp } from '../apps/OutlookApp';
 import { MinesweeperApp } from '../apps/MinesweeperApp';
 import { ShutDownDialog } from '../apps/ShutDownDialog';
-import { DisplayPropertiesApp } from '../apps/DisplayPropertiesApp';
+import { DisplayPropertiesApp, FontSizeOption } from '../apps/DisplayPropertiesApp';
 import { WALLPAPER_OPTIONS, TITLE_BAR_OPTIONS, TitleBarOption } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
 import { Sparkles, Power, RefreshCw, Palette, Settings } from 'lucide-react';
@@ -131,6 +131,9 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
     const savedId = localStorage.getItem('win98_titlebar_id');
     return TITLE_BAR_OPTIONS.find(o => o.id === savedId) || TITLE_BAR_OPTIONS[0];
   });
+  const [systemFontSize, setSystemFontSize] = useState<FontSizeOption>(() => {
+    return (localStorage.getItem('win98_font_size') as FontSizeOption) || 'standard';
+  });
 
   const highestZRef = useRef<number>(20);
 
@@ -142,12 +145,18 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleApplyDisplayChanges = useCallback((wallpaperColor: string, titleBar: TitleBarOption) => {
+  const handleApplyDisplayChanges = useCallback((wallpaperColor: string, titleBar: TitleBarOption, newFontSize?: FontSizeOption) => {
     setDesktopColor(wallpaperColor);
     setActiveTitleBar(titleBar);
+    if (newFontSize) {
+      setSystemFontSize(newFontSize);
+    }
     try {
       localStorage.setItem('win98_desktop_color', wallpaperColor);
       localStorage.setItem('win98_titlebar_id', titleBar.id);
+      if (newFontSize) {
+        localStorage.setItem('win98_font_size', newFontSize);
+      }
     } catch {
       // ignore
     }
@@ -355,6 +364,7 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
         backgroundColor: desktopColor,
         ['--win98-title-active-gradient' as string]: `linear-gradient(90deg, ${activeTitleBar.start} 0%, ${activeTitleBar.end} 100%)`,
       }}
+      data-font-size={systemFontSize}
       className="fixed inset-0 w-screen h-screen overflow-hidden select-none transition-colors duration-150"
     >
       {/* Recruiter Safety Net Button - Prominent High-Contrast Floating Header Control */}
@@ -428,6 +438,7 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
             <DisplayPropertiesApp
               currentWallpaperColor={desktopColor}
               currentTitleBar={activeTitleBar}
+              currentFontSize={systemFontSize}
               onApplyChanges={handleApplyDisplayChanges}
               onClose={() => closeWindow('display')}
             />

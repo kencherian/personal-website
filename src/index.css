@@ -211,3 +211,14 @@
 .font-sans-modern {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
+
+/* Font Size Scaling when Large / Extra Large fonts is selected */
+[data-font-size="large"] {
+  --win98-title-font-size: 13px;
+  --win98-body-font-size: 13px;
+}
+
+[data-font-size="extralarge"] {
+  --win98-title-font-size: 14.5px;
+  --win98-body-font-size: 14px;
+}

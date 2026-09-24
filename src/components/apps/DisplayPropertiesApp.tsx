@@ -7,18 +7,22 @@ import {
   TitleBarOption,
 } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
-import { Monitor, Palette, Sparkles, Check, RotateCcw } from 'lucide-react';
+import { Monitor, Palette, Sparkles, Check, RotateCcw, Type } from 'lucide-react';
+
+export type FontSizeOption = 'standard' | 'large' | 'extralarge';
 
 interface DisplayPropertiesAppProps {
   currentWallpaperColor: string;
   currentTitleBar: TitleBarOption;
-  onApplyChanges: (wallpaperColor: string, titleBar: TitleBarOption) => void;
+  currentFontSize?: FontSizeOption;
+  onApplyChanges: (wallpaperColor: string, titleBar: TitleBarOption, fontSize?: FontSizeOption) => void;
   onClose: () => void;
 }
 
 export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   currentWallpaperColor,
   currentTitleBar,
+  currentFontSize = 'standard',
   onApplyChanges,
   onClose,
 }) => {
@@ -33,6 +37,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
   const [previewWallpaperColor, setPreviewWallpaperColor] = useState<string>(currentWallpaperColor);
   const [selectedTitleBarId, setSelectedTitleBarId] = useState<string>(currentTitleBar.id);
+  const [fontSize, setFontSize] = useState<FontSizeOption>(currentFontSize);
   const [livePreview, setLivePreview] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState<boolean>(false);
 
@@ -49,8 +54,9 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     }
     setPreviewWallpaperColor(currentWallpaperColor);
     setSelectedTitleBarId(currentTitleBar.id);
+    setFontSize(currentFontSize);
     setIsDirty(false);
-  }, [currentWallpaperColor, currentTitleBar]);
+  }, [currentWallpaperColor, currentTitleBar, currentFontSize]);
 
   // When livePreview is true, sync changes directly to parent as user tweaks dropdowns
   const handleWallpaperChange = (color: string, optionId?: string) => {
@@ -64,7 +70,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setIsDirty(true);
 
     if (livePreview) {
-      onApplyChanges(color, previewTitleBar);
+      onApplyChanges(color, previewTitleBar, fontSize);
     }
   };
 
@@ -74,7 +80,16 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     const targetTitleBar = TITLE_BAR_OPTIONS.find(t => t.id === id) || currentTitleBar;
 
     if (livePreview) {
-      onApplyChanges(previewWallpaperColor, targetTitleBar);
+      onApplyChanges(previewWallpaperColor, targetTitleBar, fontSize);
+    }
+  };
+
+  const handleFontSizeChange = (size: FontSizeOption) => {
+    setFontSize(size);
+    setIsDirty(true);
+
+    if (livePreview) {
+      onApplyChanges(previewWallpaperColor, previewTitleBar, size);
     }
   };
 
@@ -93,20 +108,20 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
       setIsDirty(true);
 
       if (livePreview) {
-        onApplyChanges(wp.color, tb);
+        onApplyChanges(wp.color, tb, fontSize);
       }
     }
   };
 
   const handleApply = () => {
     soundFX.playClick();
-    onApplyChanges(previewWallpaperColor, previewTitleBar);
+    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize);
     setIsDirty(false);
   };
 
   const handleOK = () => {
     soundFX.playClick();
-    onApplyChanges(previewWallpaperColor, previewTitleBar);
+    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize);
     onClose();
   };
 
@@ -114,7 +129,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     soundFX.playClick();
     // Revert back to original props if user made live changes
     if (isDirty || livePreview) {
-      onApplyChanges(currentWallpaperColor, currentTitleBar);
+      onApplyChanges(currentWallpaperColor, currentTitleBar, currentFontSize);
     }
     onClose();
   };
@@ -126,9 +141,10 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setSelectedWallpaperId(defaultWp.id);
     setPreviewWallpaperColor(defaultWp.color);
     setSelectedTitleBarId(defaultTb.id);
+    setFontSize('standard');
     setIsDirty(true);
     if (livePreview) {
-      onApplyChanges(defaultWp.color, defaultTb);
+      onApplyChanges(defaultWp.color, defaultTb, 'standard');
     }
   };
 
@@ -220,21 +236,43 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                 />
 
                 {/* Sample Inactive Window in background */}
-                <div className="absolute top-1.5 left-2 w-[130px] win98-outset text-[8px] opacity-90 shadow">
+                <div
+                  className={`absolute top-1.5 left-2 win98-outset opacity-90 shadow transition-all duration-150 ${
+                    fontSize === 'extralarge'
+                      ? 'w-[145px] text-[10px]'
+                      : fontSize === 'large'
+                      ? 'w-[138px] text-[9px]'
+                      : 'w-[130px] text-[8px]'
+                  }`}
+                >
                   <div className="win98-title-inactive px-1 py-[1px] flex justify-between items-center text-white">
                     <span className="truncate">Inactive Window</span>
-                    <span className="text-[7px]">✕</span>
+                    <span className={fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}>✕</span>
                   </div>
-                  <div className="bg-[#c0c0c0] p-1 text-[7px] text-[#555]">
+                  <div className={`bg-[#c0c0c0] p-1 text-[#555] ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
                     Inactive Client Area
                   </div>
                 </div>
 
                 {/* Sample Active Window in foreground */}
-                <div className="absolute top-6 left-8 w-[150px] win98-outset text-[9px] shadow-lg z-10">
+                <div
+                  className={`absolute win98-outset shadow-lg z-10 transition-all duration-150 ${
+                    fontSize === 'extralarge'
+                      ? 'top-4 left-6 w-[172px]'
+                      : fontSize === 'large'
+                      ? 'top-5 left-7 w-[162px]'
+                      : 'top-6 left-8 w-[150px]'
+                  }`}
+                >
                   {/* Dynamic Active Title Bar Preview */}
                   <div
-                    className="px-1 py-[2px] flex justify-between items-center text-white font-bold"
+                    className={`px-1.5 flex justify-between items-center text-white font-bold transition-all ${
+                      fontSize === 'extralarge'
+                        ? 'py-[3px] text-[11.5px]'
+                        : fontSize === 'large'
+                        ? 'py-[2.5px] text-[10.5px]'
+                        : 'py-[2px] text-[9px]'
+                    }`}
                     style={{
                       background: `linear-gradient(90deg, ${previewTitleBar.start} 0%, ${previewTitleBar.end} 100%)`,
                       color: previewTitleBar.textColor || '#ffffff',
@@ -245,34 +283,66 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                       Active Window
                     </span>
                     <div className="flex gap-[1px]">
-                      <span className="w-2.5 h-2 bg-[#c0c0c0] text-black text-[6px] flex items-center justify-center font-bold">_</span>
-                      <span className="w-2.5 h-2 bg-[#c0c0c0] text-black text-[6px] flex items-center justify-center font-bold">□</span>
-                      <span className="w-2.5 h-2 bg-[#c0c0c0] text-black text-[6px] flex items-center justify-center font-bold">✕</span>
+                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>_</span>
+                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>□</span>
+                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>✕</span>
                     </div>
                   </div>
 
                   {/* Menu bar */}
-                  <div className="bg-[#c0c0c0] px-1 text-[7px] border-b border-[#808080] flex gap-1 text-black">
+                  <div
+                    className={`bg-[#c0c0c0] px-1 border-b border-[#808080] flex gap-1.5 text-black transition-all ${
+                      fontSize === 'extralarge' ? 'text-[9.5px] py-0.5' : fontSize === 'large' ? 'text-[8.5px] py-0.5' : 'text-[7px]'
+                    }`}
+                  >
                     <span><u>F</u>ile</span>
                     <span><u>E</u>dit</span>
                     <span><u>V</u>iew</span>
                   </div>
 
                   {/* Window Content */}
-                  <div className="bg-white m-[2px] p-1 border border-[#808080] text-[8px] text-black space-y-0.5">
-                    <div>Window Text / Palette</div>
-                    <div className="flex items-center justify-between text-[7px] text-gray-500">
+                  <div
+                    className={`bg-white m-[2px] p-1 border border-[#808080] text-black space-y-0.5 transition-all ${
+                      fontSize === 'extralarge' ? 'text-[10px]' : fontSize === 'large' ? 'text-[9px]' : 'text-[8px]'
+                    }`}
+                  >
+                    <div className="font-semibold flex items-center justify-between">
+                      <span>Window Text</span>
+                      <span className={`text-[#000080] font-mono ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
+                        {fontSize === 'large' ? '12pt Large' : fontSize === 'extralarge' ? '14pt X-Large' : '9pt Std'}
+                      </span>
+                    </div>
+                    <div
+                      className={`flex items-center justify-between text-gray-500 ${
+                        fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'
+                      }`}
+                    >
                       <span>Status: Normal</span>
-                      <button type="button" className="px-1 bg-[#c0c0c0] border border-black text-[6px]">OK</button>
+                      <button
+                        type="button"
+                        className={`bg-[#c0c0c0] border border-black font-bold ${
+                          fontSize === 'extralarge' ? 'px-2 text-[8px] py-0.5' : fontSize === 'large' ? 'px-1.5 text-[7px]' : 'px-1 text-[6px]'
+                        }`}
+                      >
+                        OK
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Sample Message Box floating */}
-                <div className="absolute bottom-1 right-2 win98-outset p-1 text-[8px] shadow z-20 bg-[#c0c0c0]">
-                  <div className="text-[7px] font-bold text-center">Sample Box</div>
+                <div className="absolute bottom-1 right-2 win98-outset p-1 shadow z-20 bg-[#c0c0c0] transition-all">
+                  <div className={`${fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'} font-bold text-center`}>
+                    Message Box
+                  </div>
                   <div className="flex justify-center mt-1">
-                    <span className="px-2 py-[1px] bg-[#c0c0c0] border border-[#0a0a0a] text-[6px] font-bold">OK</span>
+                    <span
+                      className={`bg-[#c0c0c0] border border-[#0a0a0a] font-bold ${
+                        fontSize === 'extralarge' ? 'px-2.5 py-[1px] text-[7.5px]' : fontSize === 'large' ? 'px-2 py-[1px] text-[7px]' : 'px-2 py-[1px] text-[6px]'
+                      }`}
+                    >
+                      OK
+                    </span>
                   </div>
                 </div>
               </div>
@@ -378,6 +448,35 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                     {tb.name} ({tb.description})
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* 3. Font Size Control Dropdown */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="fontsize-select" className="font-bold flex items-center gap-1">
+                  <Type size={13} className="text-[#000080]" />
+                  <span>Font Size:</span>
+                </label>
+                <div className="flex items-center gap-1">
+                  <span className="px-1.5 py-[1px] bg-[#dfdfdf] border border-[#808080] font-mono text-[9px] text-[#000080] font-bold">
+                    {fontSize === 'large' ? '120 DPI (Large)' : fontSize === 'extralarge' ? '144 DPI (X-Large)' : '96 DPI (Standard)'}
+                  </span>
+                </div>
+              </div>
+
+              <select
+                id="fontsize-select"
+                value={fontSize}
+                onChange={(e) => {
+                  soundFX.playClick();
+                  handleFontSizeChange(e.target.value as FontSizeOption);
+                }}
+                className="win98-sunken-field w-full px-2 py-1 bg-white text-[11px] outline-none cursor-pointer"
+              >
+                <option value="standard">Standard Fonts (96 DPI / Normal)</option>
+                <option value="large">Large Fonts (120 DPI / High Readability)</option>
+                <option value="extralarge">Extra Large Fonts (144 DPI / Maximum)</option>
               </select>
             </div>
 
