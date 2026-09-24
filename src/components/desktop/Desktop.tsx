@@ -11,8 +11,10 @@ import { ResumePdfApp } from '../apps/ResumePdfApp';
 import { OutlookApp } from '../apps/OutlookApp';
 import { MinesweeperApp } from '../apps/MinesweeperApp';
 import { ShutDownDialog } from '../apps/ShutDownDialog';
+import { DisplayPropertiesApp } from '../apps/DisplayPropertiesApp';
+import { WALLPAPER_OPTIONS, TITLE_BAR_OPTIONS, TitleBarOption } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
-import { Sparkles, Power, RefreshCw } from 'lucide-react';
+import { Sparkles, Power, RefreshCw, Palette, Settings } from 'lucide-react';
 
 interface DesktopProps {
   onSwitchToClassic: () => void;
@@ -97,6 +99,19 @@ const INITIAL_WINDOWS: WindowState[] = [
     width: 290,
     height: 350,
   },
+  {
+    id: 'display',
+    title: 'Display Properties',
+    iconName: 'display',
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    zIndex: 11,
+    x: 160,
+    y: 45,
+    width: 440,
+    height: 510,
+  },
 ];
 
 export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
@@ -106,6 +121,17 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
   const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [showShutdownDialog, setShowShutdownDialog] = useState(false);
   const [isSystemPoweredOff, setIsSystemPoweredOff] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Desktop Wallpaper & Active Title Bar Theme State
+  const [desktopColor, setDesktopColor] = useState<string>(() => {
+    return localStorage.getItem('win98_desktop_color') || '#008080';
+  });
+  const [activeTitleBar, setActiveTitleBar] = useState<TitleBarOption>(() => {
+    const savedId = localStorage.getItem('win98_titlebar_id');
+    return TITLE_BAR_OPTIONS.find(o => o.id === savedId) || TITLE_BAR_OPTIONS[0];
+  });
+
   const highestZRef = useRef<number>(20);
 
   // Play startup sound on first render
@@ -114,6 +140,17 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
       soundFX.playStartup();
     }, 600);
     return () => clearTimeout(timer);
+  }, []);
+
+  const handleApplyDisplayChanges = useCallback((wallpaperColor: string, titleBar: TitleBarOption) => {
+    setDesktopColor(wallpaperColor);
+    setActiveTitleBar(titleBar);
+    try {
+      localStorage.setItem('win98_desktop_color', wallpaperColor);
+      localStorage.setItem('win98_titlebar_id', titleBar.id);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const bringToFront = useCallback((id: WindowId) => {
@@ -237,6 +274,12 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
       onOpen: () => window.open('https://github.com/kencherian', '_blank'),
     },
     {
+      id: 'display',
+      title: 'Display Settings',
+      iconName: 'display',
+      onOpen: () => openWindow('display'),
+    },
+    {
       id: 'recycle',
       title: 'Recycle Bin',
       iconName: 'recycle',
@@ -293,8 +336,26 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
       onClick={() => {
         setSelectedIconId(null);
         setStartMenuOpen(false);
+        setContextMenu(null);
       }}
-      className="fixed inset-0 w-screen h-screen bg-[#008080] overflow-hidden select-none"
+      onContextMenu={(e) => {
+        // Only open context menu if right clicked on desktop workspace background directly
+        const target = e.target as HTMLElement;
+        if (target.closest('.win98-outset, input, textarea, button, a')) {
+          return;
+        }
+        e.preventDefault();
+        soundFX.playClick();
+        setContextMenu({
+          x: Math.min(e.clientX, window.innerWidth - 170),
+          y: Math.min(e.clientY, window.innerHeight - 230),
+        });
+      }}
+      style={{
+        backgroundColor: desktopColor,
+        ['--win98-title-active-gradient' as string]: `linear-gradient(90deg, ${activeTitleBar.start} 0%, ${activeTitleBar.end} 100%)`,
+      }}
+      className="fixed inset-0 w-screen h-screen overflow-hidden select-none transition-colors duration-150"
     >
       {/* Recruiter Safety Net Button - Prominent High-Contrast Floating Header Control */}
       <div className="absolute top-3 right-4 z-[9950] flex items-center gap-2">
@@ -363,8 +424,85 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
           {win.id === 'resume' && <ResumePdfApp />}
           {win.id === 'mail' && <OutlookApp onClose={() => closeWindow('mail')} />}
           {win.id === 'minesweeper' && <MinesweeperApp />}
+          {win.id === 'display' && (
+            <DisplayPropertiesApp
+              currentWallpaperColor={desktopColor}
+              currentTitleBar={activeTitleBar}
+              onApplyChanges={handleApplyDisplayChanges}
+              onClose={() => closeWindow('display')}
+            />
+          )}
         </WindowFrame>
       ))}
+
+      {/* Desktop Right-Click Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed win98-outset py-1 text-[11px] shadow-2xl z-[9980] select-none"
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px`, width: '165px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              setContextMenu(null);
+            }}
+            className="px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer flex justify-between items-center"
+          >
+            <span>Arrange Icons</span>
+            <span className="text-[9px]">▶</span>
+          </div>
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              setContextMenu(null);
+            }}
+            className="px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer"
+          >
+            Line Up Icons
+          </div>
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              setContextMenu(null);
+            }}
+            className="px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer flex items-center justify-between"
+          >
+            <span><u>R</u>efresh</span>
+            <RefreshCw size={11} className="opacity-60" />
+          </div>
+          <div className="border-t border-[#808080] border-b border-white my-1" />
+          <div className="px-3 py-1 text-gray-500 cursor-default">
+            Paste
+          </div>
+          <div className="px-3 py-1 text-gray-500 cursor-default">
+            Paste Shortcut
+          </div>
+          <div className="border-t border-[#808080] border-b border-white my-1" />
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              setContextMenu(null);
+            }}
+            className="px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer flex justify-between items-center"
+          >
+            <span>New</span>
+            <span className="text-[9px]">▶</span>
+          </div>
+          <div className="border-t border-[#808080] border-b border-white my-1" />
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              openWindow('display');
+              setContextMenu(null);
+            }}
+            className="px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer font-bold flex items-center justify-between"
+          >
+            <span>P<u>r</u>operties</span>
+            <Palette size={13} className="text-[#000080]" />
+          </div>
+        </div>
+      )}
 
       {/* Start Menu Popup */}
       <StartMenu

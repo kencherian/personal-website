@@ -130,6 +130,18 @@ export const StartMenu: React.FC<StartMenuProps> = ({
             <span>Mines<u>w</u>eeper</span>
           </div>
 
+          <div
+            onClick={() => {
+              soundFX.playClick();
+              onOpenWindow('display');
+              onClose();
+            }}
+            className="flex items-center gap-3 px-3 py-1 hover:bg-[#000080] hover:text-white cursor-pointer"
+          >
+            <RenderWinIcon name="display" size={20} />
+            <span><u>D</u>isplay Properties</span>
+          </div>
+
           <div className="border-t border-[#808080] border-b border-white my-1" />
 
           {/* Social Links */}

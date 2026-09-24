@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { KEN_BIO, KEN_CONTACT, PROJECTS } from '../../data/portfolioData';
+import { WindowId } from '../../types';
 import { soundFX } from '../../utils/sound';
 
 interface HistoryItem {
@@ -9,7 +10,7 @@ interface HistoryItem {
 
 interface DosPromptAppProps {
   onClose?: () => void;
-  onOpenWindow?: (id: 'resume' | 'mail' | 'explorer' | 'notepad') => void;
+  onOpenWindow?: (id: WindowId) => void;
 }
 
 export const DosPromptApp: React.FC<DosPromptAppProps> = ({ onClose, onOpenWindow }) => {
@@ -79,6 +80,8 @@ export const DosPromptApp: React.FC<DosPromptAppProps> = ({ onClose, onOpenWindo
               <span className="col-span-8 text-[#aaa]">Elevated privilege access attempt</span>
               <span className="col-span-4 text-white font-bold">RESUME</span>
               <span className="col-span-8 text-[#aaa]">Opens Acrobat Reader with Ken&apos;s resume</span>
+              <span className="col-span-4 text-white font-bold">DISPLAY</span>
+              <span className="col-span-8 text-[#aaa]">Opens Display Properties (desk.cpl)</span>
               <span className="col-span-4 text-white font-bold">VER</span>
               <span className="col-span-8 text-[#aaa]">Displays Windows 98 kernel version</span>
               <span className="col-span-4 text-white font-bold">EXIT</span>
@@ -179,6 +182,13 @@ export const DosPromptApp: React.FC<DosPromptAppProps> = ({ onClose, onOpenWindo
       case 'resume':
         onOpenWindow?.('resume');
         outputNode = <div className="text-[#00ff66]">Spawning Adobe Acrobat Reader (Resume_Ken_Cherian.pdf)...</div>;
+        break;
+
+      case 'display':
+      case 'desk.cpl':
+      case 'theme':
+        onOpenWindow?.('display');
+        outputNode = <div className="text-[#00ff66]">Spawning Control Panel (desk.cpl - Display Properties)...</div>;
         break;
 
       case 'mail':

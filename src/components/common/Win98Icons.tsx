@@ -194,6 +194,28 @@ export const ShutDownIcon: React.FC<IconProps> = ({ size = 32, className = '' })
   </svg>
 );
 
+export const DisplaySettingsIcon: React.FC<IconProps> = ({ size = 32, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={`shrink-0 ${className}`}>
+    {/* CRT Monitor */}
+    <rect x="2" y="3" width="22" height="18" fill="#dcdcdc" stroke="#000000" strokeWidth="1" />
+    <rect x="4" y="5" width="18" height="14" fill="#008080" />
+    {/* Mini screen preview */}
+    <rect x="6" y="7" width="14" height="3" fill="#000080" />
+    <rect x="6" y="10" width="8" height="7" fill="#ffffff" />
+    <rect x="14" y="10" width="6" height="7" fill="#c0c0c0" />
+    {/* Stand */}
+    <rect x="8" y="21" width="10" height="2" fill="#808080" stroke="#000000" strokeWidth="1" />
+    <rect x="5" y="23" width="16" height="2" fill="#c0c0c0" stroke="#000000" strokeWidth="1" />
+    {/* Color Palette Overlay */}
+    <ellipse cx="23" cy="21" rx="8" ry="7" fill="#fcd277" stroke="#000000" strokeWidth="1" />
+    <circle cx="19" cy="19" r="1.5" fill="#ef4444" />
+    <circle cx="23" cy="17" r="1.5" fill="#3b82f6" />
+    <circle cx="27" cy="19" r="1.5" fill="#10b981" />
+    <circle cx="22" cy="24" r="1.5" fill="#a855f7" />
+    <ellipse cx="27" cy="24" rx="2" ry="1.5" fill="#c0c0c0" stroke="#000000" strokeWidth="0.8" />
+  </svg>
+);
+
 export const RenderWinIcon: React.FC<{ name: string; size?: number; className?: string }> = ({ name, size = 32, className = '' }) => {
   switch (name) {
     case 'computer':
@@ -218,6 +240,8 @@ export const RenderWinIcon: React.FC<{ name: string; size?: number; className?: 
       return <MinesweeperIcon size={size} className={className} />;
     case 'shutdown':
       return <ShutDownIcon size={size} className={className} />;
+    case 'display':
+      return <DisplaySettingsIcon size={size} className={className} />;
     default:
       return <NotepadIcon size={size} className={className} />;
   }

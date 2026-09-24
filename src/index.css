@@ -95,7 +95,7 @@
 
 /* Title Bar */
 .win98-title-active {
-  background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  background: var(--win98-title-active-gradient, linear-gradient(90deg, #000080 0%, #1084d0 100%));
   color: #ffffff;
 }
 

@@ -5,7 +5,8 @@ export type WindowId =
   | 'resume' 
   | 'mail' 
   | 'minesweeper' 
-  | 'shutdown';
+  | 'shutdown'
+  | 'display';
 
 export interface WindowState {
   id: WindowId;
