@@ -7,7 +7,9 @@ import {
   TitleBarOption,
 } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
-import { Monitor, Palette, Sparkles, Check, RotateCcw, Type } from 'lucide-react';
+import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play } from 'lucide-react';
+import { StarfieldCanvas } from '../common/StarfieldCanvas';
+import { ScreenSaverMode } from '../desktop/ScreenSaverOverlay';
 
 export type FontSizeOption = 'standard' | 'large' | 'extralarge';
 
@@ -15,7 +17,16 @@ interface DisplayPropertiesAppProps {
   currentWallpaperColor: string;
   currentTitleBar: TitleBarOption;
   currentFontSize?: FontSizeOption;
-  onApplyChanges: (wallpaperColor: string, titleBar: TitleBarOption, fontSize?: FontSizeOption) => void;
+  currentScreenSaverMode?: ScreenSaverMode;
+  currentScreenSaverWait?: number;
+  onApplyChanges: (
+    wallpaperColor: string,
+    titleBar: TitleBarOption,
+    fontSize?: FontSizeOption,
+    screenSaverMode?: ScreenSaverMode,
+    screenSaverWait?: number
+  ) => void;
+  onPreviewScreenSaver?: (mode: ScreenSaverMode) => void;
   onClose: () => void;
 }
 
@@ -23,11 +34,14 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   currentWallpaperColor,
   currentTitleBar,
   currentFontSize = 'standard',
+  currentScreenSaverMode = 'stars',
+  currentScreenSaverWait = 2,
   onApplyChanges,
+  onPreviewScreenSaver,
   onClose,
 }) => {
-  // Tabs: 'appearance' | 'background' | 'schemes'
-  const [activeTab, setActiveTab] = useState<'appearance' | 'background' | 'schemes'>('appearance');
+  // Tabs: 'appearance' | 'screensaver' | 'background' | 'schemes'
+  const [activeTab, setActiveTab] = useState<'appearance' | 'screensaver' | 'background' | 'schemes'>('appearance');
 
   // Preview state (what's currently selected in the dialog)
   const [selectedWallpaperId, setSelectedWallpaperId] = useState<string>(() => {
@@ -38,6 +52,12 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   const [previewWallpaperColor, setPreviewWallpaperColor] = useState<string>(currentWallpaperColor);
   const [selectedTitleBarId, setSelectedTitleBarId] = useState<string>(currentTitleBar.id);
   const [fontSize, setFontSize] = useState<FontSizeOption>(currentFontSize);
+  const [screenSaverMode, setScreenSaverMode] = useState<ScreenSaverMode>(currentScreenSaverMode);
+  const [screenSaverWait, setScreenSaverWait] = useState<number>(currentScreenSaverWait);
+  const [showStarSettings, setShowStarSettings] = useState<boolean>(false);
+  const [starSpeed, setStarSpeed] = useState<number>(4);
+  const [starCount, setStarCount] = useState<number>(200);
+
   const [livePreview, setLivePreview] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState<boolean>(false);
 
@@ -55,8 +75,10 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setPreviewWallpaperColor(currentWallpaperColor);
     setSelectedTitleBarId(currentTitleBar.id);
     setFontSize(currentFontSize);
+    setScreenSaverMode(currentScreenSaverMode);
+    setScreenSaverWait(currentScreenSaverWait);
     setIsDirty(false);
-  }, [currentWallpaperColor, currentTitleBar, currentFontSize]);
+  }, [currentWallpaperColor, currentTitleBar, currentFontSize, currentScreenSaverMode, currentScreenSaverWait]);
 
   // When livePreview is true, sync changes directly to parent as user tweaks dropdowns
   const handleWallpaperChange = (color: string, optionId?: string) => {
@@ -70,7 +92,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setIsDirty(true);
 
     if (livePreview) {
-      onApplyChanges(color, previewTitleBar, fontSize);
+      onApplyChanges(color, previewTitleBar, fontSize, screenSaverMode, screenSaverWait);
     }
   };
 
@@ -80,7 +102,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     const targetTitleBar = TITLE_BAR_OPTIONS.find(t => t.id === id) || currentTitleBar;
 
     if (livePreview) {
-      onApplyChanges(previewWallpaperColor, targetTitleBar, fontSize);
+      onApplyChanges(previewWallpaperColor, targetTitleBar, fontSize, screenSaverMode, screenSaverWait);
     }
   };
 
@@ -89,7 +111,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setIsDirty(true);
 
     if (livePreview) {
-      onApplyChanges(previewWallpaperColor, previewTitleBar, size);
+      onApplyChanges(previewWallpaperColor, previewTitleBar, size, screenSaverMode, screenSaverWait);
     }
   };
 
@@ -108,20 +130,20 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
       setIsDirty(true);
 
       if (livePreview) {
-        onApplyChanges(wp.color, tb, fontSize);
+        onApplyChanges(wp.color, tb, fontSize, screenSaverMode, screenSaverWait);
       }
     }
   };
 
   const handleApply = () => {
     soundFX.playClick();
-    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize);
+    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize, screenSaverMode, screenSaverWait);
     setIsDirty(false);
   };
 
   const handleOK = () => {
     soundFX.playClick();
-    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize);
+    onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize, screenSaverMode, screenSaverWait);
     onClose();
   };
 
@@ -129,7 +151,13 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     soundFX.playClick();
     // Revert back to original props if user made live changes
     if (isDirty || livePreview) {
-      onApplyChanges(currentWallpaperColor, currentTitleBar, currentFontSize);
+      onApplyChanges(
+        currentWallpaperColor,
+        currentTitleBar,
+        currentFontSize,
+        currentScreenSaverMode,
+        currentScreenSaverWait
+      );
     }
     onClose();
   };
@@ -142,9 +170,11 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setPreviewWallpaperColor(defaultWp.color);
     setSelectedTitleBarId(defaultTb.id);
     setFontSize('standard');
+    setScreenSaverMode('stars');
+    setScreenSaverWait(2);
     setIsDirty(true);
     if (livePreview) {
-      onApplyChanges(defaultWp.color, defaultTb, 'standard');
+      onApplyChanges(defaultWp.color, defaultTb, 'standard', 'stars', 2);
     }
   };
 
@@ -158,7 +188,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
             soundFX.playClick();
             setActiveTab('appearance');
           }}
-          className={`px-3 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
+          className={`px-2.5 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
             activeTab === 'appearance'
               ? 'bg-[#c0c0c0] font-bold text-black border-t-2 border-t-[#ffffff] shadow-[-1px_-1px_0px_#dfdfdf]'
               : 'bg-[#b0b0b0] text-[#404040] hover:bg-[#b8b8b8]'
@@ -176,9 +206,29 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
           type="button"
           onClick={() => {
             soundFX.playClick();
+            setActiveTab('screensaver');
+          }}
+          className={`px-2.5 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
+            activeTab === 'screensaver'
+              ? 'bg-[#c0c0c0] font-bold text-black border-t-2 border-t-[#ffffff] shadow-[-1px_-1px_0px_#dfdfdf]'
+              : 'bg-[#b0b0b0] text-[#404040] hover:bg-[#b8b8b8]'
+          }`}
+          style={{
+            borderTopLeftRadius: '3px',
+            borderTopRightRadius: '3px',
+            boxShadow: activeTab === 'screensaver' ? 'inset 1px 1px #ffffff, inset -1px 0 #808080' : 'none',
+          }}
+        >
+          Screen Saver
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            soundFX.playClick();
             setActiveTab('background');
           }}
-          className={`px-3 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
+          className={`px-2.5 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
             activeTab === 'background'
               ? 'bg-[#c0c0c0] font-bold text-black border-t-2 border-t-[#ffffff] shadow-[-1px_-1px_0px_#dfdfdf]'
               : 'bg-[#b0b0b0] text-[#404040] hover:bg-[#b8b8b8]'
@@ -198,7 +248,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
             soundFX.playClick();
             setActiveTab('schemes');
           }}
-          className={`px-3 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
+          className={`px-2.5 py-1 -mb-[1px] border-t border-l border-r border-white border-b-0 cursor-pointer ${
             activeTab === 'schemes'
               ? 'bg-[#c0c0c0] font-bold text-black border-t-2 border-t-[#ffffff] shadow-[-1px_-1px_0px_#dfdfdf]'
               : 'bg-[#b0b0b0] text-[#404040] hover:bg-[#b8b8b8]'
@@ -224,8 +274,139 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
               {/* Virtual CRT Screen Display */}
               <div
                 className="w-full h-[120px] relative overflow-hidden flex flex-col p-1 transition-colors duration-150"
-                style={{ backgroundColor: previewWallpaperColor }}
+                style={{ backgroundColor: activeTab === 'screensaver' ? '#000000' : previewWallpaperColor }}
               >
+                {activeTab === 'screensaver' ? (
+                  <div className="w-full h-full relative bg-black flex items-center justify-center overflow-hidden">
+                    {screenSaverMode === 'stars' && (
+                      <StarfieldCanvas speed={starSpeed} starCount={starCount} />
+                    )}
+                    {screenSaverMode === 'blank' && (
+                      <div className="w-full h-full bg-black flex flex-col items-center justify-center">
+                        <span className="text-[#444444] font-mono text-[9px] tracking-widest">[ BLANK SCREEN ]</span>
+                      </div>
+                    )}
+                    {screenSaverMode === 'none' && (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-center p-2" style={{ backgroundColor: previewWallpaperColor }}>
+                        <span className="text-white text-[10px] font-bold drop-shadow">[ No Screen Saver ]</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Sample Inactive Window in background */}
+                    <div
+                      className={`absolute top-1.5 left-2 win98-outset opacity-90 shadow transition-all duration-150 ${
+                        fontSize === 'extralarge'
+                          ? 'w-[145px] text-[10px]'
+                          : fontSize === 'large'
+                          ? 'w-[138px] text-[9px]'
+                          : 'w-[130px] text-[8px]'
+                      }`}
+                    >
+                      <div className="win98-title-inactive px-1 py-[1px] flex justify-between items-center text-white">
+                        <span className="truncate">Inactive Window</span>
+                        <span className={fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}>✕</span>
+                      </div>
+                      <div className={`bg-[#c0c0c0] p-1 text-[#555] ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
+                        Inactive Client Area
+                      </div>
+                    </div>
+
+                    {/* Sample Active Window in foreground */}
+                    <div
+                      className={`absolute win98-outset shadow-lg z-10 transition-all duration-150 ${
+                        fontSize === 'extralarge'
+                          ? 'top-4 left-6 w-[172px]'
+                          : fontSize === 'large'
+                          ? 'top-5 left-7 w-[162px]'
+                          : 'top-6 left-8 w-[150px]'
+                      }`}
+                    >
+                      {/* Dynamic Active Title Bar Preview */}
+                      <div
+                        className={`px-1.5 flex justify-between items-center text-white font-bold transition-all ${
+                          fontSize === 'extralarge'
+                            ? 'py-[3px] text-[11.5px]'
+                            : fontSize === 'large'
+                            ? 'py-[2.5px] text-[10.5px]'
+                            : 'py-[2px] text-[9px]'
+                        }`}
+                        style={{
+                          background: `linear-gradient(90deg, ${previewTitleBar.start} 0%, ${previewTitleBar.end} 100%)`,
+                          color: previewTitleBar.textColor || '#ffffff',
+                        }}
+                      >
+                        <span className="truncate flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-yellow-300 inline-block rounded-xs" />
+                          Active Window
+                        </span>
+                        <div className="flex gap-[1px]">
+                          <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>_</span>
+                          <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>□</span>
+                          <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>✕</span>
+                        </div>
+                      </div>
+
+                      {/* Menu bar */}
+                      <div
+                        className={`bg-[#c0c0c0] px-1 border-b border-[#808080] flex gap-1.5 text-black transition-all ${
+                          fontSize === 'extralarge' ? 'text-[9.5px] py-0.5' : fontSize === 'large' ? 'text-[8.5px] py-0.5' : 'text-[7px]'
+                        }`}
+                      >
+                        <span><u>F</u>ile</span>
+                        <span><u>E</u>dit</span>
+                        <span><u>V</u>iew</span>
+                      </div>
+
+                      {/* Window Content */}
+                      <div
+                        className={`bg-white m-[2px] p-1 border border-[#808080] text-black space-y-0.5 transition-all ${
+                          fontSize === 'extralarge' ? 'text-[10px]' : fontSize === 'large' ? 'text-[9px]' : 'text-[8px]'
+                        }`}
+                      >
+                        <div className="font-semibold flex items-center justify-between">
+                          <span>Window Text</span>
+                          <span className={`text-[#000080] font-mono ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
+                            {fontSize === 'large' ? '12pt Large' : fontSize === 'extralarge' ? '14pt X-Large' : '9pt Std'}
+                          </span>
+                        </div>
+                        <div
+                          className={`flex items-center justify-between text-gray-500 ${
+                            fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'
+                          }`}
+                        >
+                          <span>Status: Normal</span>
+                          <button
+                            type="button"
+                            className={`bg-[#c0c0c0] border border-black font-bold ${
+                              fontSize === 'extralarge' ? 'px-2 text-[8px] py-0.5' : fontSize === 'large' ? 'px-1.5 text-[7px]' : 'px-1 text-[6px]'
+                            }`}
+                          >
+                            OK
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sample Message Box floating */}
+                    <div className="absolute bottom-1 right-2 win98-outset p-1 shadow z-20 bg-[#c0c0c0] transition-all">
+                      <div className={`${fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'} font-bold text-center`}>
+                        Message Box
+                      </div>
+                      <div className="flex justify-center mt-1">
+                        <span
+                          className={`bg-[#c0c0c0] border border-[#0a0a0a] font-bold ${
+                            fontSize === 'extralarge' ? 'px-2.5 py-[1px] text-[7.5px]' : fontSize === 'large' ? 'px-2 py-[1px] text-[7px]' : 'px-2 py-[1px] text-[6px]'
+                          }`}
+                        >
+                          OK
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 {/* Scanline CRT overlay effect */}
                 <div
                   className="absolute inset-0 pointer-events-none opacity-15"
@@ -234,117 +415,6 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                     backgroundSize: '100% 3px',
                   }}
                 />
-
-                {/* Sample Inactive Window in background */}
-                <div
-                  className={`absolute top-1.5 left-2 win98-outset opacity-90 shadow transition-all duration-150 ${
-                    fontSize === 'extralarge'
-                      ? 'w-[145px] text-[10px]'
-                      : fontSize === 'large'
-                      ? 'w-[138px] text-[9px]'
-                      : 'w-[130px] text-[8px]'
-                  }`}
-                >
-                  <div className="win98-title-inactive px-1 py-[1px] flex justify-between items-center text-white">
-                    <span className="truncate">Inactive Window</span>
-                    <span className={fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}>✕</span>
-                  </div>
-                  <div className={`bg-[#c0c0c0] p-1 text-[#555] ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
-                    Inactive Client Area
-                  </div>
-                </div>
-
-                {/* Sample Active Window in foreground */}
-                <div
-                  className={`absolute win98-outset shadow-lg z-10 transition-all duration-150 ${
-                    fontSize === 'extralarge'
-                      ? 'top-4 left-6 w-[172px]'
-                      : fontSize === 'large'
-                      ? 'top-5 left-7 w-[162px]'
-                      : 'top-6 left-8 w-[150px]'
-                  }`}
-                >
-                  {/* Dynamic Active Title Bar Preview */}
-                  <div
-                    className={`px-1.5 flex justify-between items-center text-white font-bold transition-all ${
-                      fontSize === 'extralarge'
-                        ? 'py-[3px] text-[11.5px]'
-                        : fontSize === 'large'
-                        ? 'py-[2.5px] text-[10.5px]'
-                        : 'py-[2px] text-[9px]'
-                    }`}
-                    style={{
-                      background: `linear-gradient(90deg, ${previewTitleBar.start} 0%, ${previewTitleBar.end} 100%)`,
-                      color: previewTitleBar.textColor || '#ffffff',
-                    }}
-                  >
-                    <span className="truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-yellow-300 inline-block rounded-xs" />
-                      Active Window
-                    </span>
-                    <div className="flex gap-[1px]">
-                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>_</span>
-                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>□</span>
-                      <span className={`${fontSize !== 'standard' ? 'w-3 h-2.5 text-[7px]' : 'w-2.5 h-2 text-[6px]'} bg-[#c0c0c0] text-black flex items-center justify-center font-bold`}>✕</span>
-                    </div>
-                  </div>
-
-                  {/* Menu bar */}
-                  <div
-                    className={`bg-[#c0c0c0] px-1 border-b border-[#808080] flex gap-1.5 text-black transition-all ${
-                      fontSize === 'extralarge' ? 'text-[9.5px] py-0.5' : fontSize === 'large' ? 'text-[8.5px] py-0.5' : 'text-[7px]'
-                    }`}
-                  >
-                    <span><u>F</u>ile</span>
-                    <span><u>E</u>dit</span>
-                    <span><u>V</u>iew</span>
-                  </div>
-
-                  {/* Window Content */}
-                  <div
-                    className={`bg-white m-[2px] p-1 border border-[#808080] text-black space-y-0.5 transition-all ${
-                      fontSize === 'extralarge' ? 'text-[10px]' : fontSize === 'large' ? 'text-[9px]' : 'text-[8px]'
-                    }`}
-                  >
-                    <div className="font-semibold flex items-center justify-between">
-                      <span>Window Text</span>
-                      <span className={`text-[#000080] font-mono ${fontSize !== 'standard' ? 'text-[8px]' : 'text-[7px]'}`}>
-                        {fontSize === 'large' ? '12pt Large' : fontSize === 'extralarge' ? '14pt X-Large' : '9pt Std'}
-                      </span>
-                    </div>
-                    <div
-                      className={`flex items-center justify-between text-gray-500 ${
-                        fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'
-                      }`}
-                    >
-                      <span>Status: Normal</span>
-                      <button
-                        type="button"
-                        className={`bg-[#c0c0c0] border border-black font-bold ${
-                          fontSize === 'extralarge' ? 'px-2 text-[8px] py-0.5' : fontSize === 'large' ? 'px-1.5 text-[7px]' : 'px-1 text-[6px]'
-                        }`}
-                      >
-                        OK
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sample Message Box floating */}
-                <div className="absolute bottom-1 right-2 win98-outset p-1 shadow z-20 bg-[#c0c0c0] transition-all">
-                  <div className={`${fontSize === 'extralarge' ? 'text-[8.5px]' : fontSize === 'large' ? 'text-[8px]' : 'text-[7px]'} font-bold text-center`}>
-                    Message Box
-                  </div>
-                  <div className="flex justify-center mt-1">
-                    <span
-                      className={`bg-[#c0c0c0] border border-[#0a0a0a] font-bold ${
-                        fontSize === 'extralarge' ? 'px-2.5 py-[1px] text-[7.5px]' : fontSize === 'large' ? 'px-2 py-[1px] text-[7px]' : 'px-2 py-[1px] text-[6px]'
-                      }`}
-                    >
-                      OK
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -594,6 +664,196 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                 <span>Reset Defaults</span>
               </button>
             </div>
+          </div>
+        )}
+
+        {/* TAB: SCREEN SAVER (Requested: toggle flying stars or blank, specify wait time in minutes) */}
+        {activeTab === 'screensaver' && (
+          <div className="space-y-3">
+            {/* Screen Saver Group Box */}
+            <fieldset className="border border-[#808080] p-2.5 shadow-sm space-y-2.5">
+              <legend className="px-1 text-[11px] font-bold text-black flex items-center gap-1">
+                <Moon size={12} className="text-[#000080]" />
+                <span>Screen Saver</span>
+              </legend>
+
+              {/* Mode Selection and Action Buttons */}
+              <div className="space-y-1.5">
+                <label htmlFor="screensaver-select" className="text-[11px] font-semibold text-gray-800">
+                  Select Screen Saver:
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    id="screensaver-select"
+                    value={screenSaverMode}
+                    onChange={(e) => {
+                      soundFX.playClick();
+                      const newMode = e.target.value as ScreenSaverMode;
+                      setScreenSaverMode(newMode);
+                      setIsDirty(true);
+                      if (livePreview) {
+                        onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize, newMode, screenSaverWait);
+                      }
+                    }}
+                    className="win98-sunken-field flex-1 px-2 py-1 bg-white text-[11px] outline-none cursor-pointer"
+                  >
+                    <option value="stars">Flying Stars (Starfield Simulation)</option>
+                    <option value="blank">Blank Screen (CRT Standby)</option>
+                    <option value="none">(None)</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playClick();
+                      if (screenSaverMode === 'stars') {
+                        setShowStarSettings(prev => !prev);
+                      }
+                    }}
+                    disabled={screenSaverMode !== 'stars'}
+                    className={`win98-btn px-2.5 py-1 text-[11px] ${
+                      screenSaverMode !== 'stars' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <u>S</u>ettings...
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundFX.playClick();
+                      onPreviewScreenSaver?.(screenSaverMode);
+                    }}
+                    disabled={screenSaverMode === 'none'}
+                    className={`win98-btn px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 ${
+                      screenSaverMode === 'none' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    title="Click to preview fullscreen screen saver. Move mouse or press any key to exit."
+                  >
+                    <Play size={11} className="text-green-700" />
+                    <span><u>P</u>review</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Starfield Settings Sub-panel if user clicks Settings... */}
+              {showStarSettings && screenSaverMode === 'stars' && (
+                <div className="win98-outset p-2 bg-[#d4d0c8] space-y-2 border border-[#808080] my-1">
+                  <div className="font-bold text-[10px] text-[#000080] border-b border-[#808080] pb-1 flex justify-between items-center">
+                    <span>Starfield Simulation Settings</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowStarSettings(false)}
+                      className="win98-ctrl-btn text-[8px]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px]">
+                      <span>Warp Speed:</span>
+                      <span className="font-mono font-bold">{starSpeed}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={starSpeed}
+                      onChange={(e) => setStarSpeed(Number(e.target.value))}
+                      className="w-full accent-[#000080] cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px]">
+                      <span>Star Density:</span>
+                      <span className="font-mono font-bold">{starCount} stars</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="80"
+                      max="400"
+                      step="20"
+                      value={starCount}
+                      onChange={(e) => setStarCount(Number(e.target.value))}
+                      className="w-full accent-[#000080] cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Wait Time in Minutes (Primary user requirement) */}
+              <div className="pt-1 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="screensaver-wait" className="text-[11px] flex items-center gap-1 font-semibold">
+                    <Clock size={12} className="text-[#000080]" />
+                    <span><u>W</u>ait:</span>
+                  </label>
+                  <input
+                    id="screensaver-wait"
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={screenSaverWait}
+                    disabled={screenSaverMode === 'none'}
+                    onChange={(e) => {
+                      const val = Math.max(1, Math.min(99, parseInt(e.target.value, 10) || 1));
+                      setScreenSaverWait(val);
+                      setIsDirty(true);
+                      if (livePreview) {
+                        onApplyChanges(previewWallpaperColor, previewTitleBar, fontSize, screenSaverMode, val);
+                      }
+                    }}
+                    className={`win98-sunken-field w-14 px-1.5 py-0.5 text-center bg-white text-[11px] font-mono outline-none ${
+                      screenSaverMode === 'none' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  />
+                  <span className="text-[11px]">minutes</span>
+                </div>
+
+                <div className="text-[10px] text-gray-600 font-mono">
+                  {screenSaverMode === 'none'
+                    ? 'Disabled'
+                    : `Activates after ${screenSaverWait}m idle`}
+                </div>
+              </div>
+
+              {/* Password Protection aesthetic checkbox */}
+              <div className="pt-1">
+                <label className="flex items-center gap-1.5 cursor-pointer text-[10px]">
+                  <input
+                    type="checkbox"
+                    defaultChecked={false}
+                    disabled={screenSaverMode === 'none'}
+                    className="accent-[#000080]"
+                  />
+                  <span>Password protected on resume</span>
+                </label>
+              </div>
+            </fieldset>
+
+            {/* Energy Saving Monitor Box */}
+            <fieldset className="border border-[#808080] p-2.5 shadow-sm">
+              <legend className="px-1 text-[11px] font-bold text-black flex items-center gap-1">
+                <Sparkles size={12} className="text-amber-600" />
+                <span>Energy saving features of monitor</span>
+              </legend>
+              <div className="flex items-center justify-between text-[10px]">
+                <div className="text-gray-600 max-w-[250px] leading-tight">
+                  To adjust the power-off standby delay and CRT energy settings, click Energy Settings.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFX.playDing();
+                    alert('Energy Star v2.0: Monitor power management is configured for maximum retro efficiency (DPMS Standby: 15 min, CRT Suspend: 30 min).');
+                  }}
+                  className="win98-btn px-2 py-1 text-[10px]"
+                >
+                  Energy...
+                </button>
+              </div>
+            </fieldset>
           </div>
         )}
 

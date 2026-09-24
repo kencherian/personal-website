@@ -12,6 +12,7 @@ import { OutlookApp } from '../apps/OutlookApp';
 import { MinesweeperApp } from '../apps/MinesweeperApp';
 import { ShutDownDialog } from '../apps/ShutDownDialog';
 import { DisplayPropertiesApp, FontSizeOption } from '../apps/DisplayPropertiesApp';
+import { ScreenSaverOverlay, ScreenSaverMode } from './ScreenSaverOverlay';
 import { WALLPAPER_OPTIONS, TITLE_BAR_OPTIONS, TitleBarOption } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
 import { Sparkles, Power, RefreshCw, Palette, Settings } from 'lucide-react';
@@ -134,6 +135,14 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
   const [systemFontSize, setSystemFontSize] = useState<FontSizeOption>(() => {
     return (localStorage.getItem('win98_font_size') as FontSizeOption) || 'standard';
   });
+  const [screenSaverMode, setScreenSaverMode] = useState<ScreenSaverMode>(() => {
+    return (localStorage.getItem('win98_screensaver_mode') as ScreenSaverMode) || 'stars';
+  });
+  const [screenSaverWait, setScreenSaverWait] = useState<number>(() => {
+    const saved = localStorage.getItem('win98_screensaver_wait');
+    return saved ? parseInt(saved, 10) || 2 : 2;
+  });
+  const [isScreenSaverActive, setIsScreenSaverActive] = useState<boolean>(false);
 
   const highestZRef = useRef<number>(20);
 
@@ -145,11 +154,47 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleApplyDisplayChanges = useCallback((wallpaperColor: string, titleBar: TitleBarOption, newFontSize?: FontSizeOption) => {
+  // Global inactivity timer for screen saver
+  useEffect(() => {
+    if (screenSaverMode === 'none' || isSystemPoweredOff) return;
+
+    let timeoutId: number;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        setIsScreenSaverActive(true);
+      }, screenSaverWait * 60 * 1000);
+    };
+
+    resetTimer();
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel'];
+    events.forEach(ev => window.addEventListener(ev, resetTimer, { passive: true }));
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(ev => window.removeEventListener(ev, resetTimer));
+    };
+  }, [screenSaverMode, screenSaverWait, isSystemPoweredOff]);
+
+  const handleApplyDisplayChanges = useCallback((
+    wallpaperColor: string,
+    titleBar: TitleBarOption,
+    newFontSize?: FontSizeOption,
+    newScreenSaverMode?: ScreenSaverMode,
+    newScreenSaverWait?: number
+  ) => {
     setDesktopColor(wallpaperColor);
     setActiveTitleBar(titleBar);
     if (newFontSize) {
       setSystemFontSize(newFontSize);
+    }
+    if (newScreenSaverMode) {
+      setScreenSaverMode(newScreenSaverMode);
+    }
+    if (newScreenSaverWait !== undefined) {
+      setScreenSaverWait(newScreenSaverWait);
     }
     try {
       localStorage.setItem('win98_desktop_color', wallpaperColor);
@@ -157,9 +202,21 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
       if (newFontSize) {
         localStorage.setItem('win98_font_size', newFontSize);
       }
+      if (newScreenSaverMode) {
+        localStorage.setItem('win98_screensaver_mode', newScreenSaverMode);
+      }
+      if (newScreenSaverWait !== undefined) {
+        localStorage.setItem('win98_screensaver_wait', newScreenSaverWait.toString());
+      }
     } catch {
       // ignore
     }
+  }, []);
+
+  const handlePreviewScreenSaver = useCallback((mode: ScreenSaverMode) => {
+    if (mode === 'none') return;
+    setScreenSaverMode(mode);
+    setIsScreenSaverActive(true);
   }, []);
 
   const bringToFront = useCallback((id: WindowId) => {
@@ -439,7 +496,10 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
               currentWallpaperColor={desktopColor}
               currentTitleBar={activeTitleBar}
               currentFontSize={systemFontSize}
+              currentScreenSaverMode={screenSaverMode}
+              currentScreenSaverWait={screenSaverWait}
               onApplyChanges={handleApplyDisplayChanges}
+              onPreviewScreenSaver={handlePreviewScreenSaver}
               onClose={() => closeWindow('display')}
             />
           )}
@@ -548,6 +608,14 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
             setWindows(INITIAL_WINDOWS);
             setActiveWindowId('notepad');
           }}
+        />
+      )}
+
+      {/* Screen Saver Fullscreen Overlay */}
+      {isScreenSaverActive && (
+        <ScreenSaverOverlay
+          mode={screenSaverMode}
+          onDismiss={() => setIsScreenSaverActive(false)}
         />
       )}
     </div>
