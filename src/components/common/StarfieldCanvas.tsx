@@ -1,9 +1,13 @@
 import React, { useRef, useEffect } from 'react';
 
+export type StarBlinkSpeed = 'none' | 'slow' | 'normal' | 'fast';
+
 interface StarfieldCanvasProps {
   className?: string;
   speed?: number;
   starCount?: number;
+  starTrailing?: boolean;
+  blinkSpeed?: StarBlinkSpeed;
 }
 
 interface Star {
@@ -13,12 +17,16 @@ interface Star {
   pz: number;
   size: number;
   color: string;
+  twinklePhase: number;
+  twinkleSpeed: number;
 }
 
 export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
   className = '',
   speed = 4,
   starCount = 240,
+  starTrailing = true,
+  blinkSpeed = 'normal',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -43,7 +51,7 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
     const maxDepth = 1000;
     const stars: Star[] = [];
 
-    const starColors = ['#ffffff', '#ffffff', '#e0f2fe', '#fef08a', '#ffffff'];
+    const starColors = ['#ffffff', '#ffffff', '#e0f2fe', '#fef08a', '#ffffff', '#fed7aa'];
 
     for (let i = 0; i < starCount; i++) {
       stars.push({
@@ -53,8 +61,20 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
         pz: maxDepth,
         size: Math.random() * 1.5 + 0.5,
         color: starColors[Math.floor(Math.random() * starColors.length)],
+        twinklePhase: Math.random() * Math.PI * 2,
+        twinkleSpeed: Math.random() * 0.08 + 0.04,
       });
     }
+
+    // Blink speed multiplier
+    const blinkMultiplier =
+      blinkSpeed === 'none'
+        ? 0
+        : blinkSpeed === 'slow'
+        ? 0.5
+        : blinkSpeed === 'fast'
+        ? 2.5
+        : 1.0;
 
     const render = () => {
       ctx.fillStyle = '#000000';
@@ -73,6 +93,7 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
           star.y = (Math.random() - 0.5) * height * 2;
           star.z = maxDepth;
           star.pz = maxDepth;
+          star.twinklePhase = Math.random() * Math.PI * 2;
         }
 
         const k = 250 / star.z;
@@ -85,21 +106,39 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
 
         if (px >= 0 && px <= width && py >= 0 && py <= height) {
           const depthRatio = 1 - star.z / maxDepth;
-          const radius = Math.max(0.6, star.size * depthRatio * 2.2);
+          let radius = Math.max(0.6, star.size * depthRatio * 2.2);
 
-          // Draw star streak from previous frame to current
-          ctx.beginPath();
-          ctx.moveTo(prevX, prevY);
-          ctx.lineTo(px, py);
-          ctx.strokeStyle = star.color;
-          ctx.lineWidth = radius;
-          ctx.stroke();
+          // Calculate blink/twinkle factor
+          let alpha = 1;
+          if (blinkMultiplier > 0) {
+            star.twinklePhase += star.twinkleSpeed * blinkMultiplier;
+            const sinVal = Math.sin(star.twinklePhase);
+            // Oscillate alpha between 0.25 and 1.0
+            alpha = 0.25 + 0.75 * ((sinVal + 1) / 2);
+            // Slight radius twinkle pulsation
+            radius = radius * (0.8 + 0.3 * alpha);
+          }
 
-          // Star head
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, Math.max(0.1, alpha));
+
+          // Star Trailing Effect: only render streaks if starTrailing is enabled
+          if (starTrailing) {
+            ctx.beginPath();
+            ctx.moveTo(prevX, prevY);
+            ctx.lineTo(px, py);
+            ctx.strokeStyle = star.color;
+            ctx.lineWidth = radius;
+            ctx.stroke();
+          }
+
+          // Star head / celestial point
           ctx.beginPath();
-          ctx.arc(px, py, radius * 0.7, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
+          ctx.arc(px, py, starTrailing ? radius * 0.7 : radius * 0.9, 0, Math.PI * 2);
+          ctx.fillStyle = star.color;
           ctx.fill();
+
+          ctx.restore();
         }
       }
 
@@ -112,7 +151,8 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [speed, starCount]);
+  }, [speed, starCount, starTrailing, blinkSpeed]);
 
   return <canvas ref={canvasRef} className={`w-full h-full block ${className}`} />;
 };
+

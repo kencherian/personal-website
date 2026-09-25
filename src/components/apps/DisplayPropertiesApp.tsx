@@ -8,7 +8,7 @@ import {
 } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
 import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play } from 'lucide-react';
-import { StarfieldCanvas } from '../common/StarfieldCanvas';
+import { StarfieldCanvas, StarBlinkSpeed } from '../common/StarfieldCanvas';
 import { ScreenSaverMode } from '../desktop/ScreenSaverOverlay';
 
 export type FontSizeOption = 'standard' | 'large' | 'extralarge';
@@ -26,7 +26,15 @@ interface DisplayPropertiesAppProps {
     screenSaverMode?: ScreenSaverMode,
     screenSaverWait?: number
   ) => void;
-  onPreviewScreenSaver?: (mode: ScreenSaverMode) => void;
+  onPreviewScreenSaver?: (
+    mode: ScreenSaverMode,
+    starSettings?: {
+      starTrailing: boolean;
+      blinkSpeed: StarBlinkSpeed;
+      speed: number;
+      starCount: number;
+    }
+  ) => void;
   onClose: () => void;
 }
 
@@ -54,15 +62,46 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   const [fontSize, setFontSize] = useState<FontSizeOption>(currentFontSize);
   const [screenSaverMode, setScreenSaverMode] = useState<ScreenSaverMode>(currentScreenSaverMode);
   const [screenSaverWait, setScreenSaverWait] = useState<number>(currentScreenSaverWait);
-  const [showStarSettings, setShowStarSettings] = useState<boolean>(false);
-  const [starSpeed, setStarSpeed] = useState<number>(4);
-  const [starCount, setStarCount] = useState<number>(200);
+  const [showStarSettings, setShowStarSettings] = useState<boolean>(true);
+  const [starTrailing, setStarTrailing] = useState<boolean>(() => {
+    const saved = localStorage.getItem('win98_star_trailing');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [starBlink, setStarBlink] = useState<StarBlinkSpeed>(() => {
+    return (localStorage.getItem('win98_star_blink') as StarBlinkSpeed) || 'normal';
+  });
+  const [starSpeed, setStarSpeed] = useState<number>(() => {
+    const saved = localStorage.getItem('win98_star_speed');
+    return saved ? Number(saved) : 4;
+  });
+  const [starCount, setStarCount] = useState<number>(() => {
+    const saved = localStorage.getItem('win98_star_count');
+    return saved ? Number(saved) : 200;
+  });
 
   const [livePreview, setLivePreview] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState<boolean>(false);
 
   // Derive current TitleBarOption
   const previewTitleBar = TITLE_BAR_OPTIONS.find(t => t.id === selectedTitleBarId) || currentTitleBar;
+
+  const handleStarTrailingToggle = (checked: boolean) => {
+    setStarTrailing(checked);
+    try {
+      localStorage.setItem('win98_star_trailing', String(checked));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleStarBlinkChange = (blink: StarBlinkSpeed) => {
+    setStarBlink(blink);
+    try {
+      localStorage.setItem('win98_star_blink', blink);
+    } catch {
+      // ignore
+    }
+  };
 
   // On initial mount or when props change, ensure sync
   useEffect(() => {
@@ -172,6 +211,16 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     setFontSize('standard');
     setScreenSaverMode('stars');
     setScreenSaverWait(2);
+    setStarTrailing(true);
+    setStarBlink('normal');
+    setStarSpeed(4);
+    setStarCount(200);
+    try {
+      localStorage.setItem('win98_star_trailing', 'true');
+      localStorage.setItem('win98_star_blink', 'normal');
+      localStorage.setItem('win98_star_speed', '4');
+      localStorage.setItem('win98_star_count', '200');
+    } catch {}
     setIsDirty(true);
     if (livePreview) {
       onApplyChanges(defaultWp.color, defaultTb, 'standard', 'stars', 2);
@@ -279,7 +328,12 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                 {activeTab === 'screensaver' ? (
                   <div className="w-full h-full relative bg-black flex items-center justify-center overflow-hidden">
                     {screenSaverMode === 'stars' && (
-                      <StarfieldCanvas speed={starSpeed} starCount={starCount} />
+                      <StarfieldCanvas
+                        speed={starSpeed}
+                        starCount={starCount}
+                        starTrailing={starTrailing}
+                        blinkSpeed={starBlink}
+                      />
                     )}
                     {screenSaverMode === 'blank' && (
                       <div className="w-full h-full bg-black flex flex-col items-center justify-center">
@@ -679,9 +733,27 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
               {/* Mode Selection and Action Buttons */}
               <div className="space-y-1.5">
-                <label htmlFor="screensaver-select" className="text-[11px] font-semibold text-gray-800">
-                  Select Screen Saver:
-                </label>
+                <div className="flex justify-between items-center">
+                  <label htmlFor="screensaver-select" className="text-[11px] font-semibold text-gray-800">
+                    Select Screen Saver:
+                  </label>
+                  {screenSaverMode === 'stars' && (
+                    <button
+                      type="button"
+                      id="starfield-submenu-toggle"
+                      onClick={() => {
+                        soundFX.playClick();
+                        setShowStarSettings((prev) => !prev);
+                      }}
+                      className="text-[10px] text-[#000080] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                      title="Toggle Starfield Simulation Customization Sub-Menu"
+                      aria-expanded={showStarSettings}
+                    >
+                      <Sparkles size={11} className="text-amber-600" />
+                      <span>{showStarSettings ? '▲ Collapse Starfield Sub-Menu' : '▼ Expand Starfield Sub-Menu'}</span>
+                    </button>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2">
                   <select
@@ -705,25 +777,35 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
                   <button
                     type="button"
+                    id="screensaver-settings-btn"
                     onClick={() => {
                       soundFX.playClick();
                       if (screenSaverMode === 'stars') {
-                        setShowStarSettings(prev => !prev);
+                        setShowStarSettings((prev) => !prev);
                       }
                     }}
                     disabled={screenSaverMode !== 'stars'}
-                    className={`win98-btn px-2.5 py-1 text-[11px] ${
+                    className={`win98-btn px-2.5 py-1 text-[11px] flex items-center gap-1 ${
                       screenSaverMode !== 'stars' ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
+                    title="Customize Starfield trailing, blink speed, warp speed and star count"
                   >
-                    <u>S</u>ettings...
+                    <span><u>S</u>ettings...</span>
+                    {screenSaverMode === 'stars' && (
+                      <span className="text-[8px] opacity-75">{showStarSettings ? '▲' : '▼'}</span>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       soundFX.playClick();
-                      onPreviewScreenSaver?.(screenSaverMode);
+                      onPreviewScreenSaver?.(screenSaverMode, {
+                        starTrailing,
+                        blinkSpeed: starBlink,
+                        speed: starSpeed,
+                        starCount,
+                      });
                     }}
                     disabled={screenSaverMode === 'none'}
                     className={`win98-btn px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 ${
@@ -737,47 +819,174 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                 </div>
               </div>
 
-              {/* Starfield Settings Sub-panel if user clicks Settings... */}
+              {/* Expandable Sub-Menu specifically for Starfield Simulation */}
               {showStarSettings && screenSaverMode === 'stars' && (
-                <div className="win98-outset p-2 bg-[#d4d0c8] space-y-2 border border-[#808080] my-1">
+                <div
+                  id="starfield-simulation-submenu"
+                  className="win98-outset p-2.5 bg-[#d4d0c8] space-y-2 border border-[#808080] my-1 shadow-sm transition-all"
+                >
                   <div className="font-bold text-[10px] text-[#000080] border-b border-[#808080] pb-1 flex justify-between items-center">
-                    <span>Starfield Simulation Settings</span>
+                    <span className="flex items-center gap-1">
+                      <Sparkles size={12} className="text-amber-600" />
+                      <span>Starfield Simulation Sub-Menu (Customization)</span>
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setShowStarSettings(false)}
-                      className="win98-ctrl-btn text-[8px]"
+                      onClick={() => {
+                        soundFX.playClick();
+                        setShowStarSettings(false);
+                      }}
+                      className="win98-ctrl-btn text-[9px] px-1"
+                      title="Collapse Starfield Sub-Menu"
                     >
                       ✕
                     </button>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px]">
-                      <span>Warp Speed:</span>
-                      <span className="font-mono font-bold">{starSpeed}x</span>
+
+                  {/* 1. Star Trailing Effect Toggle */}
+                  <div className="win98-sunken p-2 bg-[#dfdfdf] space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="star-trailing-toggle"
+                        className="flex items-center gap-2 cursor-pointer font-bold text-[11px] text-black"
+                      >
+                        <input
+                          type="checkbox"
+                          id="star-trailing-toggle"
+                          checked={starTrailing}
+                          onChange={(e) => {
+                            soundFX.playClick();
+                            handleStarTrailingToggle(e.target.checked);
+                          }}
+                          className="accent-[#000080]"
+                        />
+                        <span>Enable Star Trailing effect</span>
+                      </label>
+
+                      <span
+                        className={`px-1.5 py-[1px] text-[9px] font-mono border ${
+                          starTrailing
+                            ? 'bg-[#e0f2fe] border-[#0284c7] text-[#0369a1] font-bold'
+                            : 'bg-[#f3f4f6] border-[#9ca3af] text-[#4b5563]'
+                        }`}
+                      >
+                        {starTrailing ? 'STREAK TRAILS ON' : 'PINPOINT DOTS'}
+                      </span>
                     </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={starSpeed}
-                      onChange={(e) => setStarSpeed(Number(e.target.value))}
-                      className="w-full accent-[#000080] cursor-pointer"
-                    />
+                    <p className="text-[10px] text-gray-600 pl-5 leading-tight">
+                      When enabled, stars cast motion streaks as they fly forward. Turn off for crisp retro pinpoint stars.
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px]">
-                      <span>Star Density:</span>
-                      <span className="font-mono font-bold">{starCount} stars</span>
+
+                  {/* 2. Star Blink Speed Selection */}
+                  <div className="win98-sunken p-2 bg-[#dfdfdf] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="star-blink-select" className="font-bold text-[11px] text-black flex items-center gap-1">
+                        <span>Star Blink Speed:</span>
+                      </label>
+                      <span className="px-1.5 py-[1px] bg-white border border-[#808080] font-mono text-[9px] text-[#000080] font-bold">
+                        {starBlink === 'none'
+                          ? '0.0x (Steady Glow)'
+                          : starBlink === 'slow'
+                          ? '0.5x (Gentle Shimmer)'
+                          : starBlink === 'fast'
+                          ? '2.5x (Rapid Strobe)'
+                          : '1.0x (Normal Twinkle)'}
+                      </span>
                     </div>
-                    <input
-                      type="range"
-                      min="80"
-                      max="400"
-                      step="20"
-                      value={starCount}
-                      onChange={(e) => setStarCount(Number(e.target.value))}
-                      className="w-full accent-[#000080] cursor-pointer"
-                    />
+
+                    <select
+                      id="star-blink-select"
+                      value={starBlink}
+                      onChange={(e) => {
+                        soundFX.playClick();
+                        handleStarBlinkChange(e.target.value as StarBlinkSpeed);
+                      }}
+                      className="win98-sunken-field w-full px-2 py-1 bg-white text-[11px] outline-none cursor-pointer"
+                    >
+                      <option value="none">None (Steady Celestial Glow / No Blinking)</option>
+                      <option value="slow">Slow (Gentle Cosmic Shimmer & Twinkle)</option>
+                      <option value="normal">Normal (Classic Windows 98 Twinkling Stars)</option>
+                      <option value="fast">Fast (Rapid Pulsing & Sparkling Strobe)</option>
+                    </select>
+
+                    <div className="text-[9px] text-gray-500 font-mono flex justify-between px-0.5">
+                      <span>● Steady</span>
+                      <span>◐ Gentle Twinkle</span>
+                      <span>◑ Normal Blink</span>
+                      <span>✦ Rapid Shimmer</span>
+                    </div>
+                  </div>
+
+                  {/* 3. Warp Speed & Star Density Sliders */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#999999]">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-bold">Warp Speed:</span>
+                        <span className="font-mono font-bold text-[#000080]">{starSpeed}x</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={starSpeed}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStarSpeed(val);
+                          try {
+                            localStorage.setItem('win98_star_speed', String(val));
+                          } catch {}
+                        }}
+                        className="w-full accent-[#000080] cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-bold">Star Density:</span>
+                        <span className="font-mono font-bold text-[#000080]">{starCount} stars</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="80"
+                        max="400"
+                        step="20"
+                        value={starCount}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStarCount(val);
+                          try {
+                            localStorage.setItem('win98_star_count', String(val));
+                          } catch {}
+                        }}
+                        className="w-full accent-[#000080] cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Reset Defaults for Starfield Simulation */}
+                  <div className="flex justify-between items-center pt-1 border-t border-[#dfdfdf]">
+                    <span className="text-[9px] text-gray-600 font-mono">
+                      Preview updates live in CRT monitor
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFX.playClick();
+                        handleStarTrailingToggle(true);
+                        handleStarBlinkChange('normal');
+                        setStarSpeed(4);
+                        setStarCount(200);
+                        try {
+                          localStorage.setItem('win98_star_speed', '4');
+                          localStorage.setItem('win98_star_count', '200');
+                        } catch {}
+                      }}
+                      className="win98-btn px-2 py-0.5 text-[9px] text-gray-700 hover:text-black"
+                      title="Reset Starfield simulation settings to authentic defaults"
+                    >
+                      Reset Starfield
+                    </button>
                   </div>
                 </div>
               )}

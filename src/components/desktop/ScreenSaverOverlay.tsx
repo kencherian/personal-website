@@ -1,15 +1,59 @@
 import React, { useEffect, useRef } from 'react';
-import { StarfieldCanvas } from '../common/StarfieldCanvas';
+import { StarfieldCanvas, StarBlinkSpeed } from '../common/StarfieldCanvas';
 
 export type ScreenSaverMode = 'none' | 'stars' | 'blank';
 
 interface ScreenSaverOverlayProps {
   mode: ScreenSaverMode;
   onDismiss: () => void;
+  starTrailing?: boolean;
+  blinkSpeed?: StarBlinkSpeed;
+  speed?: number;
+  starCount?: number;
 }
 
-export const ScreenSaverOverlay: React.FC<ScreenSaverOverlayProps> = ({ mode, onDismiss }) => {
+export const ScreenSaverOverlay: React.FC<ScreenSaverOverlayProps> = ({
+  mode,
+  onDismiss,
+  starTrailing,
+  blinkSpeed,
+  speed,
+  starCount,
+}) => {
   const initialMousePos = useRef<{ x: number; y: number } | null>(null);
+
+  // Fallback to localStorage if props not explicitly provided
+  const effectiveTrailing =
+    starTrailing !== undefined
+      ? starTrailing
+      : (() => {
+          const saved = localStorage.getItem('win98_star_trailing');
+          return saved !== null ? saved === 'true' : true;
+        })();
+
+  const effectiveBlink: StarBlinkSpeed =
+    blinkSpeed !== undefined
+      ? blinkSpeed
+      : (() => {
+          const saved = localStorage.getItem('win98_star_blink') as StarBlinkSpeed;
+          return saved || 'normal';
+        })();
+
+  const effectiveSpeed =
+    speed !== undefined
+      ? speed
+      : (() => {
+          const saved = localStorage.getItem('win98_star_speed');
+          return saved ? Number(saved) : 5.5;
+        })();
+
+  const effectiveStarCount =
+    starCount !== undefined
+      ? starCount
+      : (() => {
+          const saved = localStorage.getItem('win98_star_count');
+          return saved ? Number(saved) : 350;
+        })();
 
   useEffect(() => {
     // Grace period of 300ms so initial trigger click doesn't dismiss instantly
@@ -67,8 +111,16 @@ export const ScreenSaverOverlay: React.FC<ScreenSaverOverlayProps> = ({ mode, on
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-black z-[999999] select-none cursor-none overflow-hidden">
-      {mode === 'stars' && <StarfieldCanvas speed={5.5} starCount={350} />}
+      {mode === 'stars' && (
+        <StarfieldCanvas
+          speed={effectiveSpeed}
+          starCount={effectiveStarCount}
+          starTrailing={effectiveTrailing}
+          blinkSpeed={effectiveBlink}
+        />
+      )}
       {mode === 'blank' && <div className="w-full h-full bg-black" />}
     </div>
   );
 };
+

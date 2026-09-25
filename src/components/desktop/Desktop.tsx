@@ -13,6 +13,7 @@ import { MinesweeperApp } from '../apps/MinesweeperApp';
 import { ShutDownDialog } from '../apps/ShutDownDialog';
 import { DisplayPropertiesApp, FontSizeOption } from '../apps/DisplayPropertiesApp';
 import { ScreenSaverOverlay, ScreenSaverMode } from './ScreenSaverOverlay';
+import { StarBlinkSpeed } from '../common/StarfieldCanvas';
 import { WALLPAPER_OPTIONS, TITLE_BAR_OPTIONS, TitleBarOption } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
 import { Sparkles, Power, RefreshCw, Palette, Settings } from 'lucide-react';
@@ -143,6 +144,21 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
     return saved ? parseInt(saved, 10) || 2 : 2;
   });
   const [isScreenSaverActive, setIsScreenSaverActive] = useState<boolean>(false);
+  const [starTrailing, setStarTrailing] = useState<boolean>(() => {
+    const saved = localStorage.getItem('win98_star_trailing');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [starBlink, setStarBlink] = useState<StarBlinkSpeed>(() => {
+    return (localStorage.getItem('win98_star_blink') as StarBlinkSpeed) || 'normal';
+  });
+  const [starSpeed, setStarSpeed] = useState<number>(() => {
+    const saved = localStorage.getItem('win98_star_speed');
+    return saved ? Number(saved) : 4;
+  });
+  const [starCount, setStarCount] = useState<number>(() => {
+    const saved = localStorage.getItem('win98_star_count');
+    return saved ? Number(saved) : 200;
+  });
 
   const highestZRef = useRef<number>(20);
 
@@ -213,9 +229,23 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
     }
   }, []);
 
-  const handlePreviewScreenSaver = useCallback((mode: ScreenSaverMode) => {
+  const handlePreviewScreenSaver = useCallback((
+    mode: ScreenSaverMode,
+    settings?: {
+      starTrailing: boolean;
+      blinkSpeed: StarBlinkSpeed;
+      speed: number;
+      starCount: number;
+    }
+  ) => {
     if (mode === 'none') return;
     setScreenSaverMode(mode);
+    if (settings) {
+      setStarTrailing(settings.starTrailing);
+      setStarBlink(settings.blinkSpeed);
+      setStarSpeed(settings.speed);
+      setStarCount(settings.starCount);
+    }
     setIsScreenSaverActive(true);
   }, []);
 
@@ -615,6 +645,10 @@ export const Desktop: React.FC<DesktopProps> = ({ onSwitchToClassic }) => {
       {isScreenSaverActive && (
         <ScreenSaverOverlay
           mode={screenSaverMode}
+          starTrailing={starTrailing}
+          blinkSpeed={starBlink}
+          speed={starSpeed}
+          starCount={starCount}
           onDismiss={() => setIsScreenSaverActive(false)}
         />
       )}
