@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 
-export type StarBlinkSpeed = 'none' | 'slow' | 'normal' | 'fast';
+export type StarBlinkSpeed = 'none' | 'slow' | 'normal' | 'fast' | 'hyper';
 
 interface StarfieldCanvasProps {
   className?: string;
@@ -72,6 +72,8 @@ export const StarfieldCanvas: React.FC<StarfieldCanvasProps> = ({
         ? 0
         : blinkSpeed === 'slow'
         ? 0.5
+        : blinkSpeed === 'hyper'
+        ? 5.0 // Twice as fast as Fast (2.5 * 2 = 5.0)
         : blinkSpeed === 'fast'
         ? 2.5
         : 1.0;

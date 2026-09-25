@@ -7,7 +7,7 @@ import {
   TitleBarOption,
 } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
-import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play } from 'lucide-react';
+import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play, Zap } from 'lucide-react';
 import { StarfieldCanvas, StarBlinkSpeed } from '../common/StarfieldCanvas';
 import { ScreenSaverMode } from '../desktop/ScreenSaverOverlay';
 
@@ -884,13 +884,21 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                       <label htmlFor="star-blink-select" className="font-bold text-[11px] text-black flex items-center gap-1">
                         <span>Star Blink Speed:</span>
                       </label>
-                      <span className="px-1.5 py-[1px] bg-white border border-[#808080] font-mono text-[9px] text-[#000080] font-bold">
+                      <span
+                        className={`px-1.5 py-[1px] border font-mono text-[9px] font-bold ${
+                          starBlink === 'hyper'
+                            ? 'bg-[#ffebee] border-[#d32f2f] text-[#c62828] shadow-sm'
+                            : 'bg-white border-[#808080] text-[#000080]'
+                        }`}
+                      >
                         {starBlink === 'none'
                           ? '0.0x (Steady Glow)'
                           : starBlink === 'slow'
                           ? '0.5x (Gentle Shimmer)'
                           : starBlink === 'fast'
                           ? '2.5x (Rapid Strobe)'
+                          : starBlink === 'hyper'
+                          ? '5.0x (⚡ Hyper Strobe - 2x Fast)'
                           : '1.0x (Normal Twinkle)'}
                       </span>
                     </div>
@@ -908,14 +916,52 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                       <option value="slow">Slow (Gentle Cosmic Shimmer & Twinkle)</option>
                       <option value="normal">Normal (Classic Windows 98 Twinkling Stars)</option>
                       <option value="fast">Fast (Rapid Pulsing & Sparkling Strobe)</option>
+                      <option value="hyper">Hyper (⚡ 2x Fast Hyper-Pulse / Ultra-Rapid Strobe)</option>
                     </select>
 
-                    <div className="text-[9px] text-gray-500 font-mono flex justify-between px-0.5">
+                    <div className="text-[9px] text-gray-600 font-mono flex justify-between px-0.5 items-center">
                       <span>● Steady</span>
-                      <span>◐ Gentle Twinkle</span>
-                      <span>◑ Normal Blink</span>
-                      <span>✦ Rapid Shimmer</span>
+                      <span>◐ Gentle</span>
+                      <span>◑ Normal</span>
+                      <span>✦ Fast</span>
+                      <span className={`font-bold ${starBlink === 'hyper' ? 'text-[#b71c1c] underline' : 'text-gray-500'}`}>
+                        ⚡ Hyper
+                      </span>
                     </div>
+
+                    {/* Dedicated Visual Indicator for Blink Speed in the Submenu */}
+                    {starBlink === 'hyper' ? (
+                      <div className="mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[10px] text-[#b78103] font-bold">
+                          <Zap size={13} className="text-[#e65100] fill-[#ff9800] shrink-0 animate-bounce" />
+                          <span>HYPER BLINK ACTIVE:</span>
+                          <span className="font-normal text-black text-[9.5px]">
+                            Pulses star brightness at 5.0× frequency (2× faster than Fast)
+                          </span>
+                        </div>
+                        {/* Dynamic flashing strobe indicator */}
+                        <div className="flex items-center gap-1 shrink-0 px-1 py-0.5 bg-red-600 text-white font-mono text-[8px] font-extrabold uppercase tracking-wider rounded-xs animate-pulse">
+                          <span>5.0X STROBE</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-1 px-1.5 py-0.5 bg-[#f0f0f0] border border-[#d0d0d0] text-[9.5px] text-gray-600 flex items-center justify-between font-mono">
+                        <div className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#000080]" />
+                          <span>Current Rate:</span>
+                          <span className="font-bold text-[#000080]">
+                            {starBlink === 'none'
+                              ? '0x (Constant)'
+                              : starBlink === 'slow'
+                              ? '0.5x (Gentle)'
+                              : starBlink === 'normal'
+                              ? '1.0x (Standard)'
+                              : '2.5x (Fast)'}
+                          </span>
+                        </div>
+                        <span className="text-gray-400">Choose 'Hyper' for 2× Fast speed</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 3. Warp Speed & Star Density Sliders */}
