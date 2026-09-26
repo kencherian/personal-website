@@ -236,3 +236,32 @@
 .animate-hyper-fade {
   animation: hyper-fade-pulse 0.35s ease-in-out infinite;
 }
+
+/* Momentary strobe test animation: cycles brightness from 50% to 100% and back to 80% */
+@keyframes reset-pulse-strobe {
+  0% {
+    filter: brightness(50%);
+    opacity: 0.5;
+  }
+  25% {
+    filter: brightness(120%);
+    opacity: 1;
+  }
+  50% {
+    filter: brightness(50%);
+    opacity: 0.5;
+  }
+  75% {
+    filter: brightness(100%);
+    opacity: 1;
+  }
+  100% {
+    filter: brightness(80%);
+    opacity: 0.8;
+  }
+}
+
+.animate-strobe-test {
+  animation: reset-pulse-strobe 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+

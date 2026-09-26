@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   WALLPAPER_OPTIONS,
   TITLE_BAR_OPTIONS,
@@ -81,6 +81,30 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
   const [livePreview, setLivePreview] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState<boolean>(false);
+  const [isStrobing, setIsStrobing] = useState<boolean>(false);
+  const strobeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (strobeTimerRef.current) {
+        window.clearTimeout(strobeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleTriggerResetPulse = () => {
+    soundFX.playClick();
+    if (strobeTimerRef.current) {
+      window.clearTimeout(strobeTimerRef.current);
+    }
+    setIsStrobing(false);
+    requestAnimationFrame(() => {
+      setIsStrobing(true);
+      strobeTimerRef.current = window.setTimeout(() => {
+        setIsStrobing(false);
+      }, 700);
+    });
+  };
 
   // Derive current TitleBarOption
   const previewTitleBar = TITLE_BAR_OPTIONS.find(t => t.id === selectedTitleBarId) || currentTitleBar;
@@ -933,8 +957,14 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                     {starBlink === 'hyper' ? (
                       <div
                         id="hyper-blink-indicator-container"
-                        className="mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2 animate-hyper-fade"
-                        style={{ animation: 'hyper-fade-pulse 0.35s ease-in-out infinite' }}
+                        className={`mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2 ${
+                          isStrobing ? 'animate-strobe-test' : 'animate-hyper-fade'
+                        }`}
+                        style={{
+                          animation: isStrobing
+                            ? 'reset-pulse-strobe 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                            : 'hyper-fade-pulse 0.35s ease-in-out infinite',
+                        }}
                       >
                         <div className="flex items-center gap-1.5 text-[10px] text-[#b78103] font-bold">
                           <Zap size={13} className="text-[#e65100] fill-[#ff9800] shrink-0 animate-bounce" />
@@ -943,9 +973,22 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                             Pulses star brightness at 5.0× frequency (2× faster than Fast)
                           </span>
                         </div>
-                        {/* Dynamic flashing strobe indicator */}
-                        <div className="flex items-center gap-1 shrink-0 px-1 py-0.5 bg-red-600 text-white font-mono text-[8px] font-extrabold uppercase tracking-wider rounded-xs animate-pulse">
-                          <span>5.0X STROBE</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Reset Pulse Button for tactile visual strobe test */}
+                          <button
+                            type="button"
+                            id="reset-pulse-button"
+                            onClick={handleTriggerResetPulse}
+                            className="win98-btn px-2 py-0.5 text-[9.5px] font-bold flex items-center gap-1 text-[#000080] hover:text-black cursor-pointer active:translate-y-[1px]"
+                            title="Trigger momentary strobe effect test (50% → 100% → 80% brightness cycle)"
+                          >
+                            <RotateCcw size={10} className={isStrobing ? 'animate-spin text-[#000080]' : ''} />
+                            <span>Reset Pulse</span>
+                          </button>
+                          {/* Dynamic flashing strobe indicator */}
+                          <div className="px-1 py-0.5 bg-red-600 text-white font-mono text-[8px] font-extrabold uppercase tracking-wider rounded-xs animate-pulse">
+                            <span>5.0X STROBE</span>
+                          </div>
                         </div>
                       </div>
                     ) : (
