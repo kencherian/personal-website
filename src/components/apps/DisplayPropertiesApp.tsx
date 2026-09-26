@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   WALLPAPER_OPTIONS,
   TITLE_BAR_OPTIONS,
@@ -92,7 +92,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     };
   }, []);
 
-  const handleTriggerResetPulse = () => {
+  const handleTriggerResetPulse = useCallback(() => {
     soundFX.playClick();
     if (strobeTimerRef.current) {
       window.clearTimeout(strobeTimerRef.current);
@@ -104,7 +104,31 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
         setIsStrobing(false);
       }, 700);
     });
-  };
+  }, []);
+
+  // Keyboard shortcut: Alt+T to trigger Reset Pulse stroboscopic test without mouse clicks
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Alt+T (or Alt+t)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 't' || e.key === 'T' || e.code === 'KeyT')) {
+        e.preventDefault();
+        e.stopPropagation();
+        // If not already in hyper mode, switch to hyper so the indicator and pulse are active
+        if (starBlink !== 'hyper') {
+          setStarBlink('hyper');
+          try {
+            localStorage.setItem('win98_star_blink', 'hyper');
+          } catch {}
+        }
+        handleTriggerResetPulse();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [starBlink, handleTriggerResetPulse]);
 
   // Derive current TitleBarOption
   const previewTitleBar = TITLE_BAR_OPTIONS.find(t => t.id === selectedTitleBarId) || currentTitleBar;
@@ -965,6 +989,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                             ? 'reset-pulse-strobe 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards'
                             : 'hyper-fade-pulse 0.35s ease-in-out infinite',
                         }}
+                        title="Hyper Blink Active indicator. Press Alt+T to trigger Reset Pulse strobe test without mouse clicks."
                       >
                         <div className="flex items-center gap-1.5 text-[10px] text-[#b78103] font-bold">
                           <Zap size={13} className="text-[#e65100] fill-[#ff9800] shrink-0 animate-bounce" />
@@ -979,11 +1004,16 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                             type="button"
                             id="reset-pulse-button"
                             onClick={handleTriggerResetPulse}
+                            accessKey="t"
+                            aria-keyshortcuts="Alt+T"
                             className="win98-btn px-2 py-0.5 text-[9.5px] font-bold flex items-center gap-1 text-[#000080] hover:text-black cursor-pointer active:translate-y-[1px]"
-                            title="Trigger momentary strobe effect test (50% → 100% → 80% brightness cycle)"
+                            title="Trigger momentary strobe effect test (50% → 100% → 80% brightness cycle) [Keyboard Shortcut: Alt+T]"
                           >
                             <RotateCcw size={10} className={isStrobing ? 'animate-spin text-[#000080]' : ''} />
-                            <span>Reset Pulse</span>
+                            <span>Rese<u className="underline decoration-1 font-bold">t</u> Pulse</span>
+                            <kbd className="text-[8px] font-mono text-gray-500 bg-black/5 px-1 py-0.5 rounded-[1px] border border-gray-400/40">
+                              Alt+T
+                            </kbd>
                           </button>
                           {/* Dynamic flashing strobe indicator */}
                           <div className="px-1 py-0.5 bg-red-600 text-white font-mono text-[8px] font-extrabold uppercase tracking-wider rounded-xs animate-pulse">
