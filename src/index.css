@@ -222,3 +222,17 @@
   --win98-title-font-size: 14.5px;
   --win98-body-font-size: 14px;
 }
+
+/* Hyper pulse indicator keyframe animation: smoothly fades between 80% and 100% opacity */
+@keyframes hyper-fade-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-hyper-fade {
+  animation: hyper-fade-pulse 0.35s ease-in-out infinite;
+}

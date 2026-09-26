@@ -931,7 +931,11 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
                     {/* Dedicated Visual Indicator for Blink Speed in the Submenu */}
                     {starBlink === 'hyper' ? (
-                      <div className="mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2">
+                      <div
+                        id="hyper-blink-indicator-container"
+                        className="mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2 animate-hyper-fade"
+                        style={{ animation: 'hyper-fade-pulse 0.35s ease-in-out infinite' }}
+                      >
                         <div className="flex items-center gap-1.5 text-[10px] text-[#b78103] font-bold">
                           <Zap size={13} className="text-[#e65100] fill-[#ff9800] shrink-0 animate-bounce" />
                           <span>HYPER BLINK ACTIVE:</span>
