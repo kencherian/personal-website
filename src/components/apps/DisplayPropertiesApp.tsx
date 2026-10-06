@@ -7,7 +7,7 @@ import {
   TitleBarOption,
 } from '../../data/displayThemes';
 import { soundFX } from '../../utils/sound';
-import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play, Zap } from 'lucide-react';
+import { Monitor, Palette, Sparkles, Check, RotateCcw, Type, Moon, Clock, Play, Zap, History } from 'lucide-react';
 import { StarfieldCanvas, StarBlinkSpeed } from '../common/StarfieldCanvas';
 import { ScreenSaverMode } from '../desktop/ScreenSaverOverlay';
 
@@ -83,6 +83,15 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isStrobing, setIsStrobing] = useState<boolean>(false);
   const strobeTimerRef = useRef<number | null>(null);
+  const [strobeHistory, setStrobeHistory] = useState<Array<{ id: string; timestamp: string; triggerSource: 'Button' | 'Alt+T' }>>(() => {
+    try {
+      const saved = localStorage.getItem('win98_reset_pulse_history');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return [];
+  });
 
   useEffect(() => {
     return () => {
@@ -92,11 +101,36 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     };
   }, []);
 
-  const handleTriggerResetPulse = useCallback(() => {
+  const handleTriggerResetPulse = useCallback((triggerSource: 'Button' | 'Alt+T' = 'Button') => {
     soundFX.playClick();
     if (strobeTimerRef.current) {
       window.clearTimeout(strobeTimerRef.current);
     }
+
+    const now = new Date();
+    const timeFormatted = now.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const tenths = Math.floor(now.getMilliseconds() / 100);
+    const timestamp = `${timeFormatted}.${tenths}s`;
+
+    setStrobeHistory((prev) => {
+      const updated = [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          timestamp,
+          triggerSource,
+        },
+        ...prev,
+      ].slice(0, 5);
+      try {
+        localStorage.setItem('win98_reset_pulse_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     setIsStrobing(false);
     requestAnimationFrame(() => {
       setIsStrobing(true);
@@ -120,7 +154,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
             localStorage.setItem('win98_star_blink', 'hyper');
           } catch {}
         }
-        handleTriggerResetPulse();
+        handleTriggerResetPulse('Alt+T');
       }
     };
 
@@ -979,8 +1013,9 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
 
                     {/* Dedicated Visual Indicator for Blink Speed in the Submenu */}
                     {starBlink === 'hyper' ? (
-                      <div
-                        id="hyper-blink-indicator-container"
+                      <>
+                        <div
+                          id="hyper-blink-indicator-container"
                         className={`mt-1 p-1.5 bg-[#fff8e1] border border-[#ffb300] rounded-[1px] shadow-sm flex items-center justify-between gap-2 ${
                           isStrobing ? 'animate-strobe-test' : 'animate-hyper-fade'
                         }`}
@@ -1045,7 +1080,7 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                           <button
                             type="button"
                             id="reset-pulse-button"
-                            onClick={handleTriggerResetPulse}
+                            onClick={() => handleTriggerResetPulse('Button')}
                             accessKey="t"
                             aria-keyshortcuts="Alt+T"
                             className="win98-btn px-2 py-0.5 text-[9.5px] font-bold flex items-center gap-1 text-[#000080] hover:text-black cursor-pointer active:translate-y-[1px]"
@@ -1063,6 +1098,79 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Small History Log beneath the hyper-blink indicator */}
+                      <div
+                        id="hyper-blink-history-log"
+                        className="mt-1 p-1 bg-[#ece9d8] border border-[#7f9db9] rounded-[1px] shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] text-[9px] font-mono"
+                        title="History log tracking the last 5 timestamps when Reset Pulse was triggered"
+                      >
+                        <div className="flex items-center justify-between px-1 py-0.5 border-b border-[#c8c7b8] bg-[#dfdcce]">
+                          <div className="flex items-center gap-1.5 font-sans font-bold text-[9px] text-[#000080]">
+                            <History size={11} className="text-[#000080] shrink-0" />
+                            <span>Reset Pulse History Log</span>
+                            <span className="font-mono text-[8px] font-normal text-gray-600">
+                              ({strobeHistory.length}/5)
+                            </span>
+                          </div>
+                          {strobeHistory.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStrobeHistory([]);
+                                try {
+                                  localStorage.removeItem('win98_reset_pulse_history');
+                                } catch {}
+                              }}
+                              className="text-[8px] text-gray-500 hover:text-red-700 underline cursor-pointer"
+                              title="Clear history log"
+                            >
+                              Clear Log
+                            </button>
+                          )}
+                        </div>
+
+                        {strobeHistory.length === 0 ? (
+                          <div className="py-1 px-1.5 text-center text-gray-500 italic text-[8.5px]">
+                            No strobe tests recorded yet. Press Alt+T or click 'Reset Pulse' to monitor activity.
+                          </div>
+                        ) : (
+                          <div className="p-0.5 space-y-0.5">
+                            {strobeHistory.map((item, idx) => (
+                              <div
+                                key={item.id}
+                                className={`px-1.5 py-0.5 flex items-center justify-between rounded-[1px] transition-colors ${
+                                  idx === 0
+                                    ? 'bg-[#fffde7] text-black font-semibold border border-[#ffe082]'
+                                    : 'bg-white text-gray-700 border border-[#e5e5e5]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-gray-400 font-bold text-[8px] w-3">#{idx + 1}</span>
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                      idx === 0 ? 'bg-[#ff1744] animate-pulse' : 'bg-[#000080]'
+                                    }`}
+                                  />
+                                  <span className="font-mono text-[9px] text-[#000080]">{item.timestamp}</span>
+                                  {idx === 0 && (
+                                    <span className="text-[7px] px-1 py-[0.5px] bg-[#d32f2f] text-white rounded-[1px] uppercase font-bold leading-none">
+                                      Latest
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-[8px] text-gray-500 font-sans">
+                                  <span>via:</span>
+                                  <span className="font-mono font-bold bg-[#f0f0f0] px-1 py-[0.5px] border border-gray-300 rounded-[1px] text-black">
+                                    {item.triggerSource}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                     ) : (
                       <div className="mt-1 px-1.5 py-0.5 bg-[#f0f0f0] border border-[#d0d0d0] text-[9.5px] text-gray-600 flex items-center justify-between font-mono">
                         <div className="flex items-center gap-1">
