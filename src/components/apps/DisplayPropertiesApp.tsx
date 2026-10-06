@@ -998,7 +998,49 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                             Pulses star brightness at 5.0× frequency (2× faster than Fast)
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Secondary LED-style component: Flashes in sync with strobe test & pulse cycle frequency */}
+                          <div
+                            id="hyper-blink-secondary-led"
+                            className="flex items-center gap-1.5 px-1.5 py-0.5 bg-[#141414] border border-[#555555] shadow-[inset_1px_1px_2px_rgba(0,0,0,0.85)] rounded-[2px]"
+                            title={`Secondary LED: Flashes in sync with strobe test (Status: ${
+                              isStrobing ? 'Strobe Flash Active' : '5.0 Hz Pulse Cycle Frequency'
+                            })`}
+                            aria-label="Secondary LED pulse cycle indicator"
+                          >
+                            {/* LED Socket Bezel */}
+                            <div className="w-3.5 h-3.5 rounded-full bg-[#262626] border border-[#6b7280] shadow-[inset_0_1px_2px_rgba(0,0,0,0.9)] flex items-center justify-center p-[1px]">
+                              {/* LED Diode Lens */}
+                              <div
+                                id="secondary-led-diode"
+                                className={`w-2.5 h-2.5 rounded-full relative transition-all duration-75 ${
+                                  isStrobing ? 'animate-led-strobe bg-[#ff1744]' : 'animate-led-pulse bg-[#00e676]'
+                                }`}
+                                style={{
+                                  animation: isStrobing
+                                    ? 'led-strobe-flash 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+                                    : 'led-pulse-cycle 0.35s ease-in-out infinite',
+                                }}
+                              >
+                                {/* Specular reflection highlight on diode dome */}
+                                <div className="absolute top-[0.5px] left-[0.5px] w-1 h-0.5 rounded-full bg-white/80 pointer-events-none" />
+                              </div>
+                            </div>
+                            {/* LED Label and Frequency Indicator */}
+                            <div className="flex flex-col leading-none font-mono">
+                              <span className="text-[7px] font-bold text-gray-300 uppercase tracking-tight">
+                                {isStrobing ? 'STROBE' : 'LED SYNC'}
+                              </span>
+                              <span
+                                className={`text-[6.5px] font-extrabold ${
+                                  isStrobing ? 'text-[#ff5252]' : 'text-[#69f0ae]'
+                                }`}
+                              >
+                                {isStrobing ? 'TESTING' : '5.0 Hz'}
+                              </span>
+                            </div>
+                          </div>
+
                           {/* Reset Pulse Button for tactile visual strobe test */}
                           <button
                             type="button"
