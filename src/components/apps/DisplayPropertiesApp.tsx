@@ -83,6 +83,8 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isStrobing, setIsStrobing] = useState<boolean>(false);
   const strobeTimerRef = useRef<number | null>(null);
+  const [isLogFlashing, setIsLogFlashing] = useState<boolean>(false);
+  const logFlashTimerRef = useRef<number | null>(null);
   const [strobeHistory, setStrobeHistory] = useState<Array<{ id: string; timestamp: string; triggerSource: 'Button' | 'Alt+T' }>>(() => {
     try {
       const saved = localStorage.getItem('win98_reset_pulse_history');
@@ -98,6 +100,9 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
       if (strobeTimerRef.current) {
         window.clearTimeout(strobeTimerRef.current);
       }
+      if (logFlashTimerRef.current) {
+        window.clearTimeout(logFlashTimerRef.current);
+      }
     };
   }, []);
 
@@ -105,6 +110,9 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
     soundFX.playClick();
     if (strobeTimerRef.current) {
       window.clearTimeout(strobeTimerRef.current);
+    }
+    if (logFlashTimerRef.current) {
+      window.clearTimeout(logFlashTimerRef.current);
     }
 
     const now = new Date();
@@ -129,6 +137,15 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
         localStorage.setItem('win98_reset_pulse_history', JSON.stringify(updated));
       } catch {}
       return updated;
+    });
+
+    // Trigger history log background pulse / flash animation
+    setIsLogFlashing(false);
+    requestAnimationFrame(() => {
+      setIsLogFlashing(true);
+      logFlashTimerRef.current = window.setTimeout(() => {
+        setIsLogFlashing(false);
+      }, 850);
     });
 
     setIsStrobing(false);
@@ -1102,16 +1119,25 @@ export const DisplayPropertiesApp: React.FC<DisplayPropertiesAppProps> = ({
                       {/* Small History Log beneath the hyper-blink indicator */}
                       <div
                         id="hyper-blink-history-log"
-                        className="mt-1 p-1 bg-[#ece9d8] border border-[#7f9db9] rounded-[1px] shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] text-[9px] font-mono"
+                        className={`mt-1 p-1 border border-[#7f9db9] rounded-[1px] shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] text-[9px] font-mono transition-colors duration-200 ${
+                          isLogFlashing
+                            ? 'animate-history-log-flash'
+                            : 'bg-[#ece9d8]'
+                        }`}
                         title="History log tracking the last 5 timestamps when Reset Pulse was triggered"
                       >
-                        <div className="flex items-center justify-between px-1 py-0.5 border-b border-[#c8c7b8] bg-[#dfdcce]">
+                        <div className="flex items-center justify-between px-1 py-0.5 border-b border-[#c8c7b8] bg-[#dfdcce]/85">
                           <div className="flex items-center gap-1.5 font-sans font-bold text-[9px] text-[#000080]">
                             <History size={11} className="text-[#000080] shrink-0" />
                             <span>Reset Pulse History Log</span>
                             <span className="font-mono text-[8px] font-normal text-gray-600">
                               ({strobeHistory.length}/5)
                             </span>
+                            {isLogFlashing && (
+                              <span className="text-[7px] px-1 py-[0.5px] bg-[#2e7d32] text-white rounded-[1px] uppercase font-bold tracking-tight animate-pulse">
+                                RECORDED
+                              </span>
+                            )}
                           </div>
                           {strobeHistory.length > 0 && (
                             <button

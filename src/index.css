@@ -322,3 +322,31 @@
   animation: led-strobe-flash 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+/* History log entry recording pulse/flash animation */
+@keyframes history-log-pulse-flash {
+  0% {
+    background-color: #ece9d8;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  20% {
+    background-color: #fff9c4;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.05), 0 0 8px rgba(255, 215, 0, 0.5), inset 0 0 6px rgba(255, 235, 59, 0.4);
+  }
+  45% {
+    background-color: #fffde7;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.08), 0 0 4px rgba(255, 215, 0, 0.25);
+  }
+  70% {
+    background-color: #fff8ba;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.05), 0 0 7px rgba(255, 215, 0, 0.45), inset 0 0 5px rgba(255, 235, 59, 0.35);
+  }
+  100% {
+    background-color: #ece9d8;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.animate-history-log-flash {
+  animation: history-log-pulse-flash 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
